@@ -4,9 +4,9 @@ import MasterDataChangeGovernancePage from "./MasterDataChangeGovernancePage";
 const config: ModuleConfig = {
   slug: "master_data_change_governance",
   title: "Master Data Change Governance",
-  description: "Master Data Change Governance — audit module.",
-  icon: "server",
-  group: "Technology & Resilience",
+  description: "Cross-cutting oversight of critical master data with change control and integrity analytics.",
+  icon: "shield",
+  group: "Controls, Risk & Fraud",
   component: MasterDataChangeGovernancePage,
 };
 

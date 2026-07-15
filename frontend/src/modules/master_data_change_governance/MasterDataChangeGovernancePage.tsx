@@ -1,104 +1,136 @@
-import { useEffect, useState } from "react";
-import { del, get, post } from "../../lib/api";
+import { useState } from "react";
+import ChangeLogTab from "./tabs/ChangeLog";
+import GovernanceControlsTab from "./tabs/GovernanceControls";
+import AnalyticsQualityTab from "./tabs/AnalyticsQuality";
+import DashboardKPIsTab from "./tabs/DashboardKPIs";
+import AuditFrameworkTab from "./tabs/AuditFramework";
 
-// Auto-generated stub for "Master Data Change Governance". Tenant-scoped CRUD — build on it.
-const SLUG = "master_data_change_governance";
+type Tab =
+  | "critical_field" | "coa" | "cost_centre" | "bank"
+  | "maker_checker" | "after_hours" | "orphan" | "bulk_upload" | "field_access"
+  | "quality" | "duplicates" | "reference" | "ageing" | "reconciliation" | "alerting"
+  | "dashboard"
+  | "scope" | "rcm" | "rules" | "data_sources" | "sampling"
+  | "exceptions" | "working_papers" | "findings" | "remediation";
 
-interface Item {
-  id: number;
-  title: string;
-  notes: string;
-}
+interface TabDef { key: Tab; label: string; group: string }
+
+const TABS: TabDef[] = [
+  { key: "critical_field", label: "1. Critical-Field Change Log", group: "Change Tracking" },
+  { key: "coa", label: "2. Chart-of-Accounts Governance", group: "Change Tracking" },
+  { key: "cost_centre", label: "3. Cost-Centre / Profit-Centre", group: "Change Tracking" },
+  { key: "bank", label: "4. Bank-Master Governance", group: "Change Tracking" },
+  { key: "maker_checker", label: "5. Maker-Checker Enforcement", group: "Governance Controls" },
+  { key: "after_hours", label: "6. After-Hours Changes", group: "Governance Controls" },
+  { key: "orphan", label: "7. Orphan / Unmapped Records", group: "Governance Controls" },
+  { key: "bulk_upload", label: "8. Bulk-Upload Controls", group: "Governance Controls" },
+  { key: "field_access", label: "9. Field-Level Access Review", group: "Governance Controls" },
+  { key: "quality", label: "10. Data-Quality Scorecard", group: "Analytics & Quality" },
+  { key: "duplicates", label: "11. Duplicate Detection", group: "Analytics & Quality" },
+  { key: "reference", label: "12. Reference-Data Consistency", group: "Analytics & Quality" },
+  { key: "ageing", label: "13. Change-Approval Ageing", group: "Analytics & Quality" },
+  { key: "reconciliation", label: "14. Master Reconciliation", group: "Analytics & Quality" },
+  { key: "alerting", label: "15. Sensitive-Change Alerting", group: "Analytics & Quality" },
+  { key: "dashboard", label: "16. Dashboard & KPIs", group: "Dashboard" },
+  { key: "scope", label: "17. Scope & Audit Universe", group: "Audit Framework" },
+  { key: "rcm", label: "18. Risk & Control Matrix", group: "Audit Framework" },
+  { key: "rules", label: "19. Test Rule Library", group: "Audit Framework" },
+  { key: "data_sources", label: "20. Data Source Setup", group: "Audit Framework" },
+  { key: "sampling", label: "21. Sampling & Population", group: "Audit Framework" },
+  { key: "exceptions", label: "22. Exception & Red-Flag Queue", group: "Audit Framework" },
+  { key: "working_papers", label: "23. Working Papers & Evidence", group: "Audit Framework" },
+  { key: "findings", label: "24. Observation & Finding Log", group: "Audit Framework" },
+  { key: "remediation", label: "25. Remediation / Action Tracker", group: "Audit Framework" },
+];
+
+const GROUPS = ["Change Tracking", "Governance Controls", "Analytics & Quality", "Dashboard", "Audit Framework"];
 
 export default function MasterDataChangeGovernancePage() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState<Tab>("dashboard");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  async function refresh() {
-    setItems(await get<Item[]>(`/api/modules/${SLUG}/items`));
-    setLoading(false);
+  function toggleGroup(g: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(g)) next.delete(g); else next.add(g);
+      return next;
+    });
   }
-  useEffect(() => {
-    refresh();
-  }, []);
 
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    await post(`/api/modules/${SLUG}/items`, { title, notes });
-    setTitle("");
-    setNotes("");
-    refresh();
+  function renderContent() {
+    if (active === "dashboard") return <DashboardKPIsTab />;
+
+    const changeTabs: Tab[] = ["critical_field", "coa", "cost_centre", "bank"];
+    if (changeTabs.includes(active)) return <ChangeLogTab subTab={active as any} />;
+
+    const govTabs: Tab[] = ["maker_checker", "after_hours", "orphan", "bulk_upload", "field_access"];
+    if (govTabs.includes(active)) return <GovernanceControlsTab subTab={active as any} />;
+
+    const analyticsTabs: Tab[] = ["quality", "duplicates", "reference", "ageing", "reconciliation", "alerting"];
+    if (analyticsTabs.includes(active)) return <AnalyticsQualityTab subTab={active as any} />;
+
+    const frameworkTabs: Tab[] = ["scope", "rcm", "rules", "data_sources", "sampling", "exceptions", "working_papers", "findings", "remediation"];
+    if (frameworkTabs.includes(active)) return <AuditFrameworkTab subTab={active as any} />;
+
+    return <DashboardKPIsTab />;
   }
 
   return (
-    <div style={{ display: "grid", gap: 24, gridTemplateColumns: "1.5fr 1fr" }}>
-      <div className="card" style={{ overflow: "hidden", height: "fit-content" }}>
-        {loading ? (
-          <p style={{ padding: 18 }}>Loading…</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Notes</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id}>
-                  <td>{it.title}</td>
-                  <td style={{ color: "var(--slate)" }}>{it.notes || "—"}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: "6px 12px" }}
-                      onClick={async () => {
-                        await del(`/api/modules/${SLUG}/items/${it.id}`);
-                        refresh();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={3} style={{ color: "var(--slate)" }}>
-                    No records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ color: "var(--navy)", margin: 0 }}>Master Data Change Governance</h2>
+        <p style={{ color: "var(--slate)", margin: "4px 0 0", fontSize: 14 }}>
+          Cross-cutting oversight of critical master data with change control and integrity analytics.
+        </p>
       </div>
 
-      <form className="card" style={{ padding: 22 }} onSubmit={add}>
-        <h3 style={{ color: "var(--navy)", marginBottom: 14 }}>Add record</h3>
-        <div className="field">
-          <label>Title</label>
-          <input
-            className="input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+      <div style={{ display: "flex", gap: 24 }}>
+        {/* Sidebar navigation */}
+        <nav style={{ width: 260, flexShrink: 0 }}>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            {GROUPS.map((g) => {
+              const groupTabs = TABS.filter((t) => t.group === g);
+              const collapsed = collapsedGroups.has(g);
+              return (
+                <div key={g}>
+                  <button
+                    onClick={() => toggleGroup(g)}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left",
+                      padding: "10px 14px", background: "var(--navy)", color: "#fff",
+                      border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
+                      borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    {collapsed ? "▸" : "▾"} {g}
+                  </button>
+                  {!collapsed && groupTabs.map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setActive(t.key)}
+                      style={{
+                        display: "block", width: "100%", textAlign: "left",
+                        padding: "8px 14px 8px 24px",
+                        background: active === t.key ? "var(--accent, #e0e7ff)" : "transparent",
+                        color: active === t.key ? "var(--navy)" : "var(--text, #334155)",
+                        border: "none", borderLeft: active === t.key ? "3px solid var(--navy)" : "3px solid transparent",
+                        cursor: "pointer", fontSize: 13, fontWeight: active === t.key ? 600 : 400,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Main content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {renderContent()}
         </div>
-        <div className="field">
-          <label>Notes</label>
-          <input
-            className="input"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-        <button className="btn btn-primary btn-block">Add</button>
-      </form>
+      </div>
     </div>
   );
 }
