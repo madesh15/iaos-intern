@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { get, post, put, del } from "../../lib/api";
+import { api, get, post, del } from "../../lib/api";
+
+const put = <T>(p: string, data?: unknown) =>
+  api<T>(p, { method: "PUT", body: JSON.stringify(data ?? {}) });
 
 const SLUG = "engagement_fieldwork";
 
