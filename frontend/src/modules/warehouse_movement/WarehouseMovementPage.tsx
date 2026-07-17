@@ -1,104 +1,129 @@
-import { useEffect, useState } from "react";
-import { del, get, post } from "../../lib/api";
+import { useState } from "react";
+import GateEntryMatchPage from "./pages/GateEntryMatchPage";
+import PutawayBinAccuracyPage from "./pages/PutawayBinAccuracyPage";
+import PickPackDispatchAccuracyPage from "./pages/PickPackDispatchAccuracyPage";
+import UnauthorisedMovementPage from "./pages/UnauthorisedMovementPage";
+import SpaceBinUtilisationPage from "./pages/SpaceBinUtilisationPage";
+import DamageHandlingLossPage from "./pages/DamageHandlingLossPage";
+import FIFOFEFOCompliancePage from "./pages/FIFOFEFOCompliancePage";
+import ReturnRTVProcessingPage from "./pages/ReturnRTVProcessingPage";
+import CycleCountSystemPage from "./pages/CycleCountSystemPage";
+import DockToStockTimePage from "./pages/DockToStockTimePage";
+import ManpowerProductivityPage from "./pages/ManpowerProductivityPage";
+import CrossDockControlsPage from "./pages/CrossDockControlsPage";
+import SecurityCCTVCoveragePage from "./pages/SecurityCCTVCoveragePage";
+import ThirdPLReconciliationPage from "./pages/ThirdPLReconciliationPage";
+import SlottingOptimisationReviewPage from "./pages/SlottingOptimisationReviewPage";
+import ModuleDashboardPage from "./pages/ModuleDashboardPage";
+import ScopeAuditUniversePage from "./pages/ScopeAuditUniversePage";
+import RiskControlMatrixPage from "./pages/RiskControlMatrixPage";
+import TestAnalyticsRuleLibraryPage from "./pages/TestAnalyticsRuleLibraryPage";
+import DataSourceConnectorSetupPage from "./pages/DataSourceConnectorSetupPage";
+import SamplingPopulationBuilderPage from "./pages/SamplingPopulationBuilderPage";
+import ExceptionRedFlagQueuePage from "./pages/ExceptionRedFlagQueuePage";
+import WorkingPapersEvidencePage from "./pages/WorkingPapersEvidencePage";
+import ObservationFindingLogPage from "./pages/ObservationFindingLogPage";
+import RemediationActionTrackerPage from "./pages/RemediationActionTrackerPage";
 
-// Auto-generated stub for "Warehouse & Movement". Tenant-scoped CRUD — build on it.
-const SLUG = "warehouse_movement";
+const DOMAIN_PAGES = [
+  { id: "gate-entry", label: "Gate-Entry to GRN Match", component: GateEntryMatchPage },
+  { id: "putaway-bin", label: "Put-away & Bin Accuracy", component: PutawayBinAccuracyPage },
+  { id: "pick-pack", label: "Pick-Pack-Dispatch Accuracy", component: PickPackDispatchAccuracyPage },
+  { id: "unauthorised", label: "Unauthorised Movement", component: UnauthorisedMovementPage },
+  { id: "space-bin", label: "Space & Bin Utilisation", component: SpaceBinUtilisationPage },
+  { id: "damage-loss", label: "Damage & Handling Loss", component: DamageHandlingLossPage },
+  { id: "fifo-fefo", label: "FIFO/FEFO Compliance", component: FIFOFEFOCompliancePage },
+  { id: "return-rtv", label: "Return/RTV Processing", component: ReturnRTVProcessingPage },
+  { id: "cycle-count", label: "Cycle-Count vs System", component: CycleCountSystemPage },
+  { id: "dock-to-stock", label: "Dock-to-Stock Time", component: DockToStockTimePage },
+  { id: "manpower", label: "Manpower Productivity", component: ManpowerProductivityPage },
+  { id: "cross-dock", label: "Cross-Dock Controls", component: CrossDockControlsPage },
+  { id: "security-cctv", label: "Security & CCTV Coverage", component: SecurityCCTVCoveragePage },
+  { id: "3pl-recon", label: "3PL Reconciliation", component: ThirdPLReconciliationPage },
+  { id: "slotting", label: "Slotting Optimisation Review", component: SlottingOptimisationReviewPage },
+];
 
-interface Item {
-  id: number;
-  title: string;
-  notes: string;
-}
+const STANDARD_PAGES = [
+  { id: "dashboard", label: "Module Dashboard & KPIs", component: ModuleDashboardPage },
+  { id: "scope", label: "Scope & Audit Universe", component: ScopeAuditUniversePage },
+  { id: "rcm", label: "Risk & Control Matrix (RCM)", component: RiskControlMatrixPage },
+  { id: "rule-library", label: "Test & Analytics Rule Library", component: TestAnalyticsRuleLibraryPage },
+  { id: "data-source", label: "Data Source & Connector Setup", component: DataSourceConnectorSetupPage },
+  { id: "sampling", label: "Sampling & Population Builder", component: SamplingPopulationBuilderPage },
+  { id: "exception-queue", label: "Exception & Red-Flag Queue", component: ExceptionRedFlagQueuePage },
+  { id: "working-papers", label: "Working Papers & Evidence", component: WorkingPapersEvidencePage },
+  { id: "finding-log", label: "Observation & Finding Log", component: ObservationFindingLogPage },
+  { id: "remediation", label: "Remediation / Action Tracker", component: RemediationActionTrackerPage },
+];
 
 export default function WarehouseMovementPage() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
-  async function refresh() {
-    setItems(await get<Item[]>(`/api/modules/${SLUG}/items`));
-    setLoading(false);
-  }
-  useEffect(() => {
-    refresh();
-  }, []);
+  const activePage =
+    DOMAIN_PAGES.find((p) => p.id === activeTab) ||
+    STANDARD_PAGES.find((p) => p.id === activeTab);
 
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    await post(`/api/modules/${SLUG}/items`, { title, notes });
-    setTitle("");
-    setNotes("");
-    refresh();
-  }
+  const ActiveComponent = activePage ? activePage.component : () => null;
 
   return (
-    <div style={{ display: "grid", gap: 24, gridTemplateColumns: "1.5fr 1fr" }}>
-      <div className="card" style={{ overflow: "hidden", height: "fit-content" }}>
-        {loading ? (
-          <p style={{ padding: 18 }}>Loading…</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Notes</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id}>
-                  <td>{it.title}</td>
-                  <td style={{ color: "var(--slate)" }}>{it.notes || "—"}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ padding: "6px 12px" }}
-                      onClick={async () => {
-                        await del(`/api/modules/${SLUG}/items/${it.id}`);
-                        refresh();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={3} style={{ color: "var(--slate)" }}>
-                    No records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+    <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: "24px", alignItems: "start" }}>
+      {/* Sidebar Navigation */}
+      <div className="card" style={{ padding: "16px 0" }}>
+        <div style={{ padding: "0 16px", marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "var(--slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Standard Framework
+        </div>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {STANDARD_PAGES.map((page) => (
+            <li key={page.id}>
+              <button
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 16px",
+                  fontSize: "14px",
+                  background: activeTab === page.id ? "var(--navy-tint)" : "transparent",
+                  color: activeTab === page.id ? "var(--navy)" : "var(--ink)",
+                  fontWeight: activeTab === page.id ? 600 : 400,
+                  borderLeft: activeTab === page.id ? "3px solid var(--navy)" : "3px solid transparent",
+                }}
+                onClick={() => setActiveTab(page.id)}
+              >
+                {page.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div style={{ padding: "0 16px", margin: "24px 0 12px 0", fontSize: "12px", fontWeight: 600, color: "var(--slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Domain Specific
+        </div>
+        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          {DOMAIN_PAGES.map((page) => (
+            <li key={page.id}>
+              <button
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 16px",
+                  fontSize: "14px",
+                  background: activeTab === page.id ? "var(--navy-tint)" : "transparent",
+                  color: activeTab === page.id ? "var(--navy)" : "var(--ink)",
+                  fontWeight: activeTab === page.id ? 600 : 400,
+                  borderLeft: activeTab === page.id ? "3px solid var(--navy)" : "3px solid transparent",
+                }}
+                onClick={() => setActiveTab(page.id)}
+              >
+                {page.label}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <form className="card" style={{ padding: 22 }} onSubmit={add}>
-        <h3 style={{ color: "var(--navy)", marginBottom: 14 }}>Add record</h3>
-        <div className="field">
-          <label>Title</label>
-          <input
-            className="input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label>Notes</label>
-          <input
-            className="input"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-        <button className="btn btn-primary btn-block">Add</button>
-      </form>
+      {/* Main Content Area */}
+      <div>
+        <ActiveComponent />
+      </div>
     </div>
   );
 }
