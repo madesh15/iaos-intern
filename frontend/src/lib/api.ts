@@ -1,6 +1,8 @@
 /** Tiny typed fetch wrapper. Injects the JWT and unwraps JSON/errors. */
 const TOKEN_KEY = "iaos_token";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -26,7 +28,7 @@ export async function api<T = unknown>(
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 204) return undefined as T;
 
