@@ -162,7 +162,7 @@ function ProceduresTab() {
   const [rows, setRows] = useState<any[]>([]);
   const [signer, setSigner] = useState("");
 
-  const load = () => get(`${BASE}/procedures`).then(setRows);
+  const load = () => get<any[]>(`${BASE}/procedures`).then(setRows);
   useEffect(() => {
     load();
   }, []);
@@ -255,7 +255,7 @@ function SimpleListTab({
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState<Record<string, any>>(emptyItem);
 
-  const load = () => get(`${BASE}/${endpoint}`).then(setRows);
+  const load = () => get<any[]>(`${BASE}/${endpoint}`).then(setRows);
   useEffect(() => {
     load();
   }, [endpoint]);
