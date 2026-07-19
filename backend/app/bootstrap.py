@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.models.user import User, UserRole
+from app.modules.data_analytics_caat.models import DataSource
 
 
 def create_all_tables():
