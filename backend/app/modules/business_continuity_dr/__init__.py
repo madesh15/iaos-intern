@@ -1,1 +1,1 @@
-"""Business Continuity & DR module."""
+"""Business Continuity & DR — BIA, DR testing, RTO/RPO and crisis governance."""

@@ -4,9 +4,10 @@ import BusinessContinuityDrPage from "./BusinessContinuityDrPage";
 const config: ModuleConfig = {
   slug: "business_continuity_dr",
   title: "Business Continuity & DR",
-  description: "Business Continuity & DR — audit module.",
+  description:
+    "Confirms the organisation can survive disruption: BIA currency, DR testing, RTO/RPO adherence and crisis governance.",
   icon: "server",
-  group: "Technology & Resilience",
+  group: "IT & Security",
   component: BusinessContinuityDrPage,
 };
 
