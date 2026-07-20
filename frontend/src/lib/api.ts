@@ -1,6 +1,8 @@
 /** Tiny typed fetch wrapper. Injects the JWT and unwraps JSON/errors. */
 const TOKEN_KEY = "iaos_token";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -26,14 +28,18 @@ export async function api<T = unknown>(
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 204) return undefined as T;
 
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401) clearToken();
-    throw new ApiError(res.status, body.detail || `Request failed (${res.status})`);
+    let msg = body.detail || `Request failed (${res.status})`;
+    if (Array.isArray(msg)) {
+      msg = msg.map((e: any) => e.msg || e.message || JSON.stringify(e)).join("; ");
+    }
+    throw new ApiError(res.status, String(msg));
   }
   return body as T;
 }
@@ -41,6 +47,8 @@ export async function api<T = unknown>(
 export const get = <T>(p: string) => api<T>(p);
 export const post = <T>(p: string, data?: unknown) =>
   api<T>(p, { method: "POST", body: JSON.stringify(data ?? {}) });
+export const put = <T>(p: string, data?: unknown) =>
+  api<T>(p, { method: "PUT", body: JSON.stringify(data ?? {}) });
 export const patch = <T>(p: string, data?: unknown) =>
   api<T>(p, { method: "PATCH", body: JSON.stringify(data ?? {}) });
 export const del = (p: string) => api<void>(p, { method: "DELETE" });
