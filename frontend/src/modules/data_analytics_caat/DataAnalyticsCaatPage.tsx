@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { del, get, post } from "../../lib/api";
 
-// Auto-generated stub for "Utilities & Energy". Tenant-scoped CRUD — build on it.
-const SLUG = "utilities_energy";
+// Auto-generated stub for "Data Analytics & CAAT". Tenant-scoped CRUD — build on it.
+const SLUG = "data_analytics_caat";
 
 interface Item {
   id: number;
@@ -10,7 +10,7 @@ interface Item {
   notes: string;
 }
 
-export default function UtilitiesEnergyPage() {
+export default function DataAnalyticsCaatPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");

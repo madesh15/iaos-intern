@@ -1,5 +1,5 @@
 import type { ModuleConfig } from "../registry";
-import DataAnalyticsCaatPage from "./pages/DataAnalyticsCaatPage";
+import DataAnalyticsCaatPage from "./DataAnalyticsCaatPage";
 
 const config: ModuleConfig = {
   slug: "data_analytics_caat",
