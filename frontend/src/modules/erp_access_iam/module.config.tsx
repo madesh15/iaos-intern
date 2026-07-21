@@ -3,10 +3,9 @@ import ErpAccessIamPage from "./ErpAccessIamPage";
 
 const config: ModuleConfig = {
   slug: "erp_access_iam",
-  title: "Application & ERP Access (IAM)",
-  description:
-    "Governs who can do what inside the ERP: role design, joiner-mover-leaver, dormant accounts, SoD, and access recertification.",
-  icon: "lock",
+  title: "ERP Access (IAM)",
+  description: "ERP Access (IAM) — audit module.",
+  icon: "server",
   group: "Technology & Resilience",
   component: ErpAccessIamPage,
 };

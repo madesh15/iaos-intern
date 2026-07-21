@@ -4,10 +4,9 @@ import WhistleblowerGrievancePage from "./WhistleblowerGrievancePage";
 const config: ModuleConfig = {
   slug: "whistleblower_grievance",
   title: "Whistleblower & Grievance",
-  description:
-    "Confidential ethics-and-grievance channel with intake, triage, investigation, protection and closure.",
+  description: "Whistleblower & Grievance — audit module.",
   icon: "shield",
-  group: "Tax, Legal & Compliance",
+  group: "Controls, Risk & Fraud",
   component: WhistleblowerGrievancePage,
 };
 
