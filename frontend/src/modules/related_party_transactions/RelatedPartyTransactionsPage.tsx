@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { get, post, patch, del } from "../../lib/api";
+import BulkImportTab from "./BulkImportTab";
 
 const BASE = "/api/modules/related_party_transactions";
 
 type Tab =
   | "dashboard"
   | "procedures"
+  | "bulk_import"
   | "scope"
   | "rcm"
   | "rules"
@@ -19,6 +21,7 @@ type Tab =
 const TABS: { key: Tab; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "procedures", label: "Procedures" },
+   { key: "bulk_import", label: "Bulk Import" },
   { key: "scope", label: "Scope" },
   { key: "rcm", label: "RCM" },
   { key: "rules", label: "Rule Library" },
@@ -55,6 +58,7 @@ export default function RelatedPartyTransactionsPage() {
 
       {tab === "dashboard" && <DashboardTab />}
       {tab === "procedures" && <ProceduresTab />}
+      {tab === "bulk_import" && <BulkImportTab />}
       {tab === "scope" && (
         <SimpleListTab
           endpoint="scope"
