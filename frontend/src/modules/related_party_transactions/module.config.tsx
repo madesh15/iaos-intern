@@ -1,9 +1,13 @@
+import type { ModuleConfig } from "../registry";
 import RelatedPartyTransactionsPage from "./RelatedPartyTransactionsPage";
 
-export default {
+const config: ModuleConfig = {
   slug: "related_party_transactions",
   title: "Related-Party Transactions",
-  icon: "🔗",
+  description: "Related-Party Transactions — audit module.",
+  icon: "wallet",
+  group: "Finance & Close",
   component: RelatedPartyTransactionsPage,
-  roles: ["auditor", "tenant_admin"],
 };
+
+export default config;

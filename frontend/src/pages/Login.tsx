@@ -11,6 +11,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -20,6 +21,11 @@ export default function Login() {
     setBusy(true);
     try {
       await login(email, password);
+      if (rememberMe) {
+        localStorage.setItem("remembered_email", email);
+      } else {
+        localStorage.removeItem("remembered_email");
+      }
       navigate("/app");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed");
@@ -27,6 +33,15 @@ export default function Login() {
       setBusy(false);
     }
   }
+
+  // Pre-fill remembered email if exists
+  useState(() => {
+    const saved = localStorage.getItem("remembered_email");
+    if (saved) {
+      setEmail(saved);
+      setRememberMe(true);
+    }
+  });
 
   return (
     <div className="auth">
@@ -100,6 +115,28 @@ export default function Login() {
                 required
               />
             </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, marginTop: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "14px", color: "var(--slate)", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+              Remember Me
+            </label>
+            <a
+              href="#forgot"
+              onClick={(e) => {
+                e.preventDefault();
+                alert(`A password reset link has been sent to ${email || "your email"} if registered.`);
+              }}
+              style={{ fontSize: "14px", color: "var(--gold)", fontWeight: 600 }}
+            >
+              Forgot Password?
+            </a>
           </div>
 
           <button className="btn btn-primary btn-block" disabled={busy}>

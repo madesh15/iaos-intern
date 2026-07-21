@@ -31,6 +31,7 @@ export interface ModuleConfig {
 
 /** Canonical order + icon for each navigation group. */
 export const GROUPS: { name: string; icon: IconName }[] = [
+  { name: "Finance Cycles", icon: "wallet" },
   { name: "Audit Command Center", icon: "file-check" },
   { name: "Controls, Risk & Fraud", icon: "shield" },
   { name: "Finance & Close", icon: "wallet" },
