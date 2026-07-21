@@ -265,7 +265,7 @@ class AnalyticsRule(Base, TenantMixin):
 
 
 # ── Sub-page 20: Data Source & Connector Setup ─────────────────────────────
-class DataSource(Base, TenantMixin):
+class ERPDataSource(Base, TenantMixin):
     __tablename__ = "mod_erp_access_iam_datasrc"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -295,7 +295,7 @@ class SamplingSet(Base, TenantMixin):
 
 
 # ── Sub-page 22: Exception & Red-Flag Queue ────────────────────────────────
-class ExceptionItem(Base, TenantMixin):
+class ERPExceptionItem(Base, TenantMixin):
     __tablename__ = "mod_erp_access_iam_exceptions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -312,7 +312,7 @@ class ExceptionItem(Base, TenantMixin):
 
 
 # ── Sub-page 23: Working Papers & Evidence ─────────────────────────────────
-class WorkingPaper(Base, TenantMixin):
+class ERPWorkingPaper(Base, TenantMixin):
     __tablename__ = "mod_erp_access_iam_papers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -330,7 +330,7 @@ class WorkingPaper(Base, TenantMixin):
 
 
 # ── Sub-page 24: Observation & Finding Log ─────────────────────────────────
-class Finding(Base, TenantMixin):
+class ERPFinding(Base, TenantMixin):
     __tablename__ = "mod_erp_access_iam_findings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -348,7 +348,7 @@ class Finding(Base, TenantMixin):
 
 
 # ── Sub-page 25: Remediation / Action Tracker ──────────────────────────────
-class Remediation(Base, TenantMixin):
+class ERPRemediation(Base, TenantMixin):
     __tablename__ = "mod_erp_access_iam_remediation"
 
     id: Mapped[int] = mapped_column(primary_key=True)

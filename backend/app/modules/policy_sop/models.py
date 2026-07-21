@@ -307,7 +307,7 @@ class PolicyTemplate(Base, TenantMixin):
 # Working Paper
 # ---------------------------------------------------------------------------
 
-class WorkingPaper(Base, TenantMixin):
+class PolicySopWorkingPaper(Base, TenantMixin):
     __tablename__ = "mod_policy_sop_working_papers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -328,7 +328,7 @@ class WorkingPaper(Base, TenantMixin):
 # Data Source
 # ---------------------------------------------------------------------------
 
-class DataSource(Base, TenantMixin):
+class PolicySopDataSource(Base, TenantMixin):
     __tablename__ = "mod_policy_sop_data_sources"
 
     id: Mapped[int] = mapped_column(primary_key=True)

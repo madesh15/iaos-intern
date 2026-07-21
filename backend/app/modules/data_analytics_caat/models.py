@@ -6,7 +6,7 @@ from app.core.database import Base
 from app.core.tenancy import TenantMixin
 
 
-class DataSource(Base, TenantMixin):
+class DACDataSource(Base, TenantMixin):
     __tablename__ = "mod_data_analytics_data_sources"
 
     id: Mapped[int] = mapped_column(primary_key=True)

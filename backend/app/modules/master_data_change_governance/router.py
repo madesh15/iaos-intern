@@ -22,13 +22,13 @@ from .models import (
     MakerCheckerWorkflow,
     MasterDataChangeLog,
     ReferenceDataCode,
-    RemediationItem,
+    MDCGRemediationItem,
     ReconciliationResult,
-    RcmEntry,
+    MDCGRcmEntry,
     SamplingRecord,
     SensitiveChangeAlert,
-    TestRule,
-    WorkingPaper,
+    MDCGTestRule,
+    MDCGWorkingPaper,
 )
 from .schemas import (
     AlertCreate,
@@ -415,7 +415,7 @@ def dashboard_kpis(current_user: CurrentUser, db: DbSession):
     ).count()
     find_open = tenant_scoped(db.query(AuditFinding).filter(AuditFinding.status == "Open"), current_user).count()
     rem_open = tenant_scoped(
-        db.query(RemediationItem).filter(RemediationItem.status.in_(["Planned", "In Progress"])), current_user
+        db.query(MDCGRemediationItem).filter(MDCGRemediationItem.status.in_(["Planned", "In Progress"])), current_user
     ).count()
     return {
         "total_change_logs": cl,
@@ -462,13 +462,13 @@ def delete_scope(item_id: int, current_user: CurrentUser, db: DbSession):
 # ===========================================================================
 @router.get("/rcm", response_model=list[RcmOut])
 def list_rcm(current_user: CurrentUser, db: DbSession):
-    q = tenant_scoped(db.query(RcmEntry), current_user)
+    q = tenant_scoped(db.query(MDCGRcmEntry), current_user)
     return [RcmOut.model_validate(r) for r in q.all()]
 
 
 @router.post("/rcm", response_model=RcmOut, status_code=201)
 def create_rcm(body: RcmCreate, current_user: CurrentUser, db: DbSession):
-    item = RcmEntry(**body.model_dump(), tenant_id=current_user.tenant_id)
+    item = MDCGRcmEntry(**body.model_dump(), tenant_id=current_user.tenant_id)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -477,7 +477,7 @@ def create_rcm(body: RcmCreate, current_user: CurrentUser, db: DbSession):
 
 @router.delete("/rcm/{item_id}", status_code=204)
 def delete_rcm(item_id: int, current_user: CurrentUser, db: DbSession):
-    item = tenant_scoped(db.query(RcmEntry).filter(RcmEntry.id == item_id), current_user).first()
+    item = tenant_scoped(db.query(MDCGRcmEntry).filter(MDCGRcmEntry.id == item_id), current_user).first()
     if not item:
         raise HTTPException(404, "RCM entry not found")
     db.delete(item)
@@ -489,13 +489,13 @@ def delete_rcm(item_id: int, current_user: CurrentUser, db: DbSession):
 # ===========================================================================
 @router.get("/rules", response_model=list[TestRuleOut])
 def list_rules(current_user: CurrentUser, db: DbSession):
-    q = tenant_scoped(db.query(TestRule), current_user)
+    q = tenant_scoped(db.query(MDCGTestRule), current_user)
     return [TestRuleOut.model_validate(r) for r in q.all()]
 
 
 @router.post("/rules", response_model=TestRuleOut, status_code=201)
 def create_rule(body: TestRuleCreate, current_user: CurrentUser, db: DbSession):
-    item = TestRule(**body.model_dump(), tenant_id=current_user.tenant_id)
+    item = MDCGTestRule(**body.model_dump(), tenant_id=current_user.tenant_id)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -504,7 +504,7 @@ def create_rule(body: TestRuleCreate, current_user: CurrentUser, db: DbSession):
 
 @router.delete("/rules/{item_id}", status_code=204)
 def delete_rule(item_id: int, current_user: CurrentUser, db: DbSession):
-    item = tenant_scoped(db.query(TestRule).filter(TestRule.id == item_id), current_user).first()
+    item = tenant_scoped(db.query(MDCGTestRule).filter(MDCGTestRule.id == item_id), current_user).first()
     if not item:
         raise HTTPException(404, "Rule not found")
     db.delete(item)
@@ -606,13 +606,13 @@ def update_exception(item_id: int, body: ExceptionCreate, current_user: CurrentU
 # ===========================================================================
 @router.get("/working-papers", response_model=list[WorkingPaperOut])
 def list_working_papers(current_user: CurrentUser, db: DbSession):
-    q = tenant_scoped(db.query(WorkingPaper), current_user)
+    q = tenant_scoped(db.query(MDCGWorkingPaper), current_user)
     return [WorkingPaperOut.model_validate(r) for r in q.all()]
 
 
 @router.post("/working-papers", response_model=WorkingPaperOut, status_code=201)
 def create_working_paper(body: WorkingPaperCreate, current_user: CurrentUser, db: DbSession):
-    item = WorkingPaper(**body.model_dump(), tenant_id=current_user.tenant_id)
+    item = MDCGWorkingPaper(**body.model_dump(), tenant_id=current_user.tenant_id)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -622,7 +622,7 @@ def create_working_paper(body: WorkingPaperCreate, current_user: CurrentUser, db
 @router.delete("/working-papers/{item_id}", status_code=204)
 def delete_working_paper(item_id: int, current_user: CurrentUser, db: DbSession):
     item = tenant_scoped(
-        db.query(WorkingPaper).filter(WorkingPaper.id == item_id), current_user
+        db.query(MDCGWorkingPaper).filter(MDCGWorkingPaper.id == item_id), current_user
     ).first()
     if not item:
         raise HTTPException(404, "Working paper not found")
@@ -667,13 +667,13 @@ def update_finding(item_id: int, body: FindingCreate, current_user: CurrentUser,
 # ===========================================================================
 @router.get("/remediation", response_model=list[RemediationOut])
 def list_remediation(current_user: CurrentUser, db: DbSession):
-    q = tenant_scoped(db.query(RemediationItem), current_user)
-    return [RemediationOut.model_validate(r) for r in q.order_by(RemediationItem.id.desc()).all()]
+    q = tenant_scoped(db.query(MDCGRemediationItem), current_user)
+    return [RemediationOut.model_validate(r) for r in q.order_by(MDCGRemediationItem.id.desc()).all()]
 
 
 @router.post("/remediation", response_model=RemediationOut, status_code=201)
 def create_remediation(body: RemediationCreate, current_user: CurrentUser, db: DbSession):
-    item = RemediationItem(**body.model_dump(), tenant_id=current_user.tenant_id)
+    item = MDCGRemediationItem(**body.model_dump(), tenant_id=current_user.tenant_id)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -683,7 +683,7 @@ def create_remediation(body: RemediationCreate, current_user: CurrentUser, db: D
 @router.patch("/remediation/{item_id}", response_model=RemediationOut)
 def update_remediation(item_id: int, body: RemediationCreate, current_user: CurrentUser, db: DbSession):
     item = tenant_scoped(
-        db.query(RemediationItem).filter(RemediationItem.id == item_id), current_user
+        db.query(MDCGRemediationItem).filter(MDCGRemediationItem.id == item_id), current_user
     ).first()
     if not item:
         raise HTTPException(404, "Remediation item not found")

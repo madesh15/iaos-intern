@@ -261,7 +261,7 @@ class TestAnalyticsRule(Base, TenantMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
-class DataSourceConnector(Base, TenantMixin):
+class BCDDataSourceConnector(Base, TenantMixin):
     __tablename__ = "mod_business_continuity_dr_data_src"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -296,7 +296,7 @@ class ExceptionRedFlag(Base, TenantMixin):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
-class WorkingPaper(Base, TenantMixin):
+class BCDWorkingPaper(Base, TenantMixin):
     __tablename__ = "mod_business_continuity_dr_wp"
 
     id: Mapped[int] = mapped_column(primary_key=True)

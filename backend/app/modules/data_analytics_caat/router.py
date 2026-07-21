@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from app.api.deps import CurrentUser, DbSession
 from app.core.tenancy import tenant_scoped
 
-from .models import DataSource
+from .models import DACDataSource
 from .schemas import DataSourceCreate, DataSourceOut
 
 MANIFEST = {
@@ -26,8 +26,8 @@ router = APIRouter()
 
 @router.get("/data-sources", response_model=list[DataSourceOut])
 def list_data_sources(db: DbSession):
-    q = db.query(DataSource)
-    return [DataSourceOut.model_validate(i) for i in q.order_by(DataSource.id.desc()).all()]
+    q = db.query(DACDataSource)
+    return [DataSourceOut.model_validate(i) for i in q.order_by(DACDataSource.id.desc()).all()]
 
 
 @router.post("/data-sources", response_model=DataSourceOut, status_code=201)
@@ -35,7 +35,7 @@ def create_data_source(
     body: DataSourceCreate,
     db: DbSession,
 ):
-    item = DataSource(
+    item = DACDataSource(
         source_name=body.source_name,
         source_type=body.source_type,
         host=body.host,
@@ -58,7 +58,7 @@ def update_data_source(
     db: DbSession,
 ):
     item = tenant_scoped(
-        db.query(DataSource).filter(DataSource.id == item_id),
+        db.query(DACDataSource).filter(DACDataSource.id == item_id),
         current_user,
     ).first()
 
@@ -79,7 +79,7 @@ def update_data_source(
 
 @router.delete("/data-sources/{item_id}", status_code=204)
 def delete_data_source(item_id: int, current_user: CurrentUser, db: DbSession):
-    item = db.query(DataSource).filter(DataSource.id == item_id).first()
+    item = db.query(DACDataSource).filter(DACDataSource.id == item_id).first()
 
     if not item:
         raise HTTPException(404, "Data Source not found")

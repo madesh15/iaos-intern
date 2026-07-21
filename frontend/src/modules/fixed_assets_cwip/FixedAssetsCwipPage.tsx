@@ -1155,11 +1155,7 @@ function ShellFeatureView({ feature }: { feature: FeatureDef }) {
   return (
     <div>
       {/* Status banner */}
-<<<<<<< HEAD
-      {data.status && (
-=======
       {Boolean(data.status) && (
->>>>>>> feature/fixed-assets-cwip
         <div className="alert" style={{
           background: "var(--gold-tint)",
           color: "var(--gold-strong)",

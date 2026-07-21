@@ -20,21 +20,21 @@ from .models import (
     AnalyticsRule,
     AuditScope,
     ControlMatrix,
-    DataSource,
+    ERPDataSource,
     DormantAccount,
     ExternalAccess,
-    ExceptionItem,
-    Finding,
+    ERPExceptionItem,
+    ERPFinding,
     LoginLog,
     PrivilegedAccess,
     RecertificationCampaign,
-    Remediation,
+    ERPRemediation,
     RoleDefinition,
     SamplingSet,
     SensitiveTransaction,
     SharedAccount,
     SodViolation,
-    WorkingPaper,
+    ERPWorkingPaper,
 )
 from .schemas import (
     AccessLifecycleCreate,
@@ -180,22 +180,22 @@ _crud("/rcm", ControlMatrix, ControlMatrixCreate, ControlMatrixOut, "RCM entry")
 _crud("/rules", AnalyticsRule, AnalyticsRuleCreate, AnalyticsRuleOut, "Rule")
 
 # ── 20. Data Source & Connector Setup ──────────────────────────────────────
-_crud("/datasrc", DataSource, DataSourceCreate, DataSourceOut, "Data source")
+_crud("/datasrc", ERPDataSource, DataSourceCreate, DataSourceOut, "Data source")
 
 # ── 21. Sampling & Population Builder ──────────────────────────────────────
 _crud("/sampling", SamplingSet, SamplingSetCreate, SamplingSetOut, "Sampling set")
 
 # ── 22. Exception & Red-Flag Queue ────────────────────────────────────────
-_crud("/exceptions", ExceptionItem, ExceptionItemCreate, ExceptionItemOut, "Exception")
+_crud("/exceptions", ERPExceptionItem, ExceptionItemCreate, ExceptionItemOut, "Exception")
 
 # ── 23. Working Papers & Evidence ──────────────────────────────────────────
-_crud("/papers", WorkingPaper, WorkingPaperCreate, WorkingPaperOut, "Working paper")
+_crud("/papers", ERPWorkingPaper, WorkingPaperCreate, WorkingPaperOut, "Working paper")
 
 # ── 24. Observation & Finding Log ──────────────────────────────────────────
-_crud("/findings", Finding, FindingCreate, FindingOut, "Finding")
+_crud("/findings", ERPFinding, FindingCreate, FindingOut, "Finding")
 
 # ── 25. Remediation / Action Tracker ───────────────────────────────────────
-_crud("/remediation", Remediation, RemediationCreate, RemediationOut, "Remediation item")
+_crud("/remediation", ERPRemediation, RemediationCreate, RemediationOut, "Remediation item")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -223,10 +223,10 @@ def dashboard(current_user: CurrentUser, db: DbSession):
         "scope_entries": count(AuditScope),
         "rcm_entries": count(ControlMatrix),
         "analytics_rules": count(AnalyticsRule),
-        "data_sources": count(DataSource),
+        "data_sources": count(ERPDataSource),
         "sampling_sets": count(SamplingSet),
-        "exceptions": count(ExceptionItem),
-        "working_papers": count(WorkingPaper),
-        "findings": count(Finding),
-        "remediation_items": count(Remediation),
+        "exceptions": count(ERPExceptionItem),
+        "working_papers": count(ERPWorkingPaper),
+        "findings": count(ERPFinding),
+        "remediation_items": count(ERPRemediation),
     }

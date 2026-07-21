@@ -22,7 +22,7 @@ from .models import (
     Attestation,
     AuditLog,
     BreachReport,
-    DataSource,
+    PolicySopDataSource,
     Department,
     GapAnalysis,
     Notification,
@@ -36,7 +36,7 @@ from .models import (
     Remediation,
     RiskControl,
     Sampling,
-    WorkingPaper,
+    PolicySopWorkingPaper,
 )
 from .schemas import (
     AnnouncementCreate,
@@ -1392,14 +1392,14 @@ def list_working_papers(
     review_status: Optional[str] = None,
     audit_id: Optional[int] = None,
 ):
-    query = tenant_scoped(db.query(WorkingPaper), current_user)
+    query = tenant_scoped(db.query(PolicySopWorkingPaper), current_user)
     if review_status:
-        query = query.filter(WorkingPaper.review_status == review_status)
+        query = query.filter(PolicySopWorkingPaper.review_status == review_status)
     if audit_id:
-        query = query.filter(WorkingPaper.audit_id == audit_id)
+        query = query.filter(PolicySopWorkingPaper.audit_id == audit_id)
     total = query.count()
     pages = math.ceil(total / per_page) if per_page > 0 else 0
-    items = query.order_by(WorkingPaper.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    items = query.order_by(PolicySopWorkingPaper.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
     return {
         "items": [WorkingPaperResponse.model_validate(i) for i in items],
         "total": total,
@@ -1414,7 +1414,7 @@ def create_working_paper(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    wp = WorkingPaper(
+    wp = PolicySopWorkingPaper(
         title=body.title,
         description=body.description,
         evidence_notes=body.evidence_notes,
@@ -1436,9 +1436,9 @@ def get_working_paper(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    wp = db.query(WorkingPaper).filter(
-        WorkingPaper.id == wp_id,
-        WorkingPaper.tenant_id == current_user.tenant_id,
+    wp = db.query(PolicySopWorkingPaper).filter(
+        PolicySopWorkingPaper.id == wp_id,
+        PolicySopWorkingPaper.tenant_id == current_user.tenant_id,
     ).first()
     if not wp:
         raise HTTPException(404, "Working paper not found")
@@ -1452,11 +1452,11 @@ def update_working_paper(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    q = db.query(WorkingPaper).filter(WorkingPaper.id == wp_id)
+    q = db.query(PolicySopWorkingPaper).filter(PolicySopWorkingPaper.id == wp_id)
     if current_user.tenant_id is None:
-        q = q.filter(WorkingPaper.tenant_id.is_(None))
+        q = q.filter(PolicySopWorkingPaper.tenant_id.is_(None))
     else:
-        q = q.filter(WorkingPaper.tenant_id == current_user.tenant_id)
+        q = q.filter(PolicySopWorkingPaper.tenant_id == current_user.tenant_id)
     wp = q.first()
     if not wp:
         raise HTTPException(404, "Working paper not found")
@@ -1473,9 +1473,9 @@ def delete_working_paper(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    wp = db.query(WorkingPaper).filter(
-        WorkingPaper.id == wp_id,
-        WorkingPaper.tenant_id == current_user.tenant_id,
+    wp = db.query(PolicySopWorkingPaper).filter(
+        PolicySopWorkingPaper.id == wp_id,
+        PolicySopWorkingPaper.tenant_id == current_user.tenant_id,
     ).first()
     if not wp:
         raise HTTPException(404, "Working paper not found")
@@ -1498,14 +1498,14 @@ def list_data_sources(
     source_type: Optional[str] = None,
     is_active: Optional[bool] = None,
 ):
-    query = tenant_scoped(db.query(DataSource), current_user)
+    query = tenant_scoped(db.query(PolicySopDataSource), current_user)
     if source_type:
-        query = query.filter(DataSource.source_type == source_type)
+        query = query.filter(PolicySopDataSource.source_type == source_type)
     if is_active is not None:
-        query = query.filter(DataSource.is_active == is_active)
+        query = query.filter(PolicySopDataSource.is_active == is_active)
     total = query.count()
     pages = math.ceil(total / per_page) if per_page > 0 else 0
-    items = query.order_by(DataSource.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    items = query.order_by(PolicySopDataSource.id.desc()).offset((page - 1) * per_page).limit(per_page).all()
     return {
         "items": [DataSourceResponse.model_validate(i) for i in items],
         "total": total,
@@ -1520,7 +1520,7 @@ def create_data_source(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    ds = DataSource(
+    ds = PolicySopDataSource(
         name=body.name,
         source_type=body.source_type,
         description=body.description,
@@ -1540,9 +1540,9 @@ def get_data_source(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    ds = db.query(DataSource).filter(
-        DataSource.id == ds_id,
-        DataSource.tenant_id == current_user.tenant_id,
+    ds = db.query(PolicySopDataSource).filter(
+        PolicySopDataSource.id == ds_id,
+        PolicySopDataSource.tenant_id == current_user.tenant_id,
     ).first()
     if not ds:
         raise HTTPException(404, "Data source not found")
@@ -1556,9 +1556,9 @@ def update_data_source(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    ds = db.query(DataSource).filter(
-        DataSource.id == ds_id,
-        DataSource.tenant_id == current_user.tenant_id,
+    ds = db.query(PolicySopDataSource).filter(
+        PolicySopDataSource.id == ds_id,
+        PolicySopDataSource.tenant_id == current_user.tenant_id,
     ).first()
     if not ds:
         raise HTTPException(404, "Data source not found")
@@ -1575,9 +1575,9 @@ def delete_data_source(
     current_user: CurrentUser,
     db: DbSession,
 ):
-    ds = db.query(DataSource).filter(
-        DataSource.id == ds_id,
-        DataSource.tenant_id == current_user.tenant_id,
+    ds = db.query(PolicySopDataSource).filter(
+        PolicySopDataSource.id == ds_id,
+        PolicySopDataSource.tenant_id == current_user.tenant_id,
     ).first()
     if not ds:
         raise HTTPException(404, "Data source not found")

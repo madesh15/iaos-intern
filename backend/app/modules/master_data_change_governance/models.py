@@ -183,7 +183,7 @@ class AuditScopeItem(Base, TenantMixin):
 # ---------------------------------------------------------------------------
 # 11. Risk & Control Matrix — RCM (Shell)
 # ---------------------------------------------------------------------------
-class RcmEntry(Base, TenantMixin):
+class MDCGRcmEntry(Base, TenantMixin):
     __tablename__ = "mod_mdcg_rcm"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -200,7 +200,7 @@ class RcmEntry(Base, TenantMixin):
 # ---------------------------------------------------------------------------
 # 12. Test & Analytics Rule Library (Shell)
 # ---------------------------------------------------------------------------
-class TestRule(Base, TenantMixin):
+class MDCGTestRule(Base, TenantMixin):
     __tablename__ = "mod_mdcg_rules"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -258,7 +258,7 @@ class ExceptionItem(Base, TenantMixin):
 # ---------------------------------------------------------------------------
 # 16. Working Papers & Evidence (Shell)
 # ---------------------------------------------------------------------------
-class WorkingPaper(Base, TenantMixin):
+class MDCGWorkingPaper(Base, TenantMixin):
     __tablename__ = "mod_mdcg_working_papers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -288,7 +288,7 @@ class AuditFinding(Base, TenantMixin):
 # ---------------------------------------------------------------------------
 # 18. Remediation / Action Tracker (Shell)
 # ---------------------------------------------------------------------------
-class RemediationItem(Base, TenantMixin):
+class MDCGRemediationItem(Base, TenantMixin):
     __tablename__ = "mod_mdcg_remediation"
 
     id: Mapped[int] = mapped_column(primary_key=True)
