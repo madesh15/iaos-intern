@@ -1,20 +1,14 @@
 from pydantic import BaseModel
 
 
-class DataSourceCreate(BaseModel):
-    source_name: str
-    source_type: str
-    host: str
-    database_name: str
-    status: str = "Active"
+class ItemCreate(BaseModel):
+    title: str
+    notes: str = ""
 
 
-class DataSourceOut(BaseModel):
+class ItemOut(BaseModel):
     id: int
-    source_name: str
-    source_type: str
-    host: str
-    database_name: str
-    status: str
+    title: str
+    notes: str
 
     model_config = {"from_attributes": True}
