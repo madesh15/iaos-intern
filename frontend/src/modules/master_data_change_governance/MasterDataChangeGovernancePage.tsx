@@ -60,6 +60,34 @@ function SavedBanner({ show }: { show: boolean }) {
   );
 }
 
+function exportCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+  const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function TableToolbar({ search, setSearch, selected, onDelete, onCsv, csvLabel }: {
+  search: string; setSearch: (s: string) => void;
+  selected: Set<number>; onDelete: () => void;
+  onCsv: () => void; csvLabel?: string;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+      <input className="input" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180, maxWidth: 320 }} />
+      {selected.size > 0 && (
+        <button className="btn btn-ghost" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={onDelete}>
+          Delete ({selected.size})
+        </button>
+      )}
+      <button className="btn btn-ghost" onClick={onCsv}>{csvLabel || "Export CSV"}</button>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════
    MAIN PAGE
    ══════════════════════════════════════════════════════════════ */
@@ -194,9 +222,17 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_id: "", record_name: "", field_name: "", old_value: "", new_value: "", change_type: "update", change_user: "", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/${endpoint}`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.record_id + it.record_name + it.field_name + it.old_value + it.new_value + it.change_user + it.approval_status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/${endpoint}`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, [endpoint]);
 
   async function add(e: React.FormEvent) {
@@ -205,6 +241,20 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
     await post(`/api/modules/${SLUG}/change-logs`, form);
     setForm({ ...form, record_id: "", record_name: "", field_name: "", old_value: "", new_value: "", notes: "" });
     setSaved(true); setTimeout(() => setSaved(false), 2000);
+    refresh();
+  }
+
+  function toggleSelect(id: number) {
+    setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function toggleAll() {
+    setSelected((p) => {
+      if (p.size === filtered.length) return new Set<number>();
+      return new Set(filtered.map((it) => it.id));
+    });
+  }
+  async function bulkDelete() {
+    for (const id of selected) await del(`/api/modules/${SLUG}/change-logs/${id}`);
     refresh();
   }
 
@@ -235,25 +285,34 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No change log entries yet.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Timestamp</th><th>Master</th><th>Record</th><th>Field</th><th>Old → New</th><th>User</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id}>
-                  <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{new Date(it.change_timestamp).toLocaleString()}</td>
-                  <td><span className="badge badge-slate">{it.master_type}</span></td>
-                  <td><strong>{it.record_name || it.record_id}</strong></td>
-                  <td>{it.field_name}</td>
-                  <td style={{ fontSize: 12 }}><span style={{ color: "var(--slate)" }}>{it.old_value || "—"}</span> → <span style={{ color: "var(--navy)" }}>{it.new_value || "—"}</span></td>
-                  <td>{it.change_user || "—"}</td>
-                  <td><span className={`badge ${badge(it.approval_status)}`}>{it.approval_status}</span></td>
-                  <td style={{ textAlign: "right" }}><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/change-logs/${it.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv(`${endpoint}.csv`, ["Timestamp","Master","Record","Field","Old","New","User","Status"],
+              filtered.map((it) => [new Date(it.change_timestamp).toLocaleString(), it.master_type, it.record_name||it.record_id, it.field_name, it.old_value, it.new_value, it.change_user, it.approval_status]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr>
+                <th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th>
+                <th>Timestamp</th><th>Master</th><th>Record</th><th>Field</th><th>Old → New</th><th>User</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody>
+                {filtered.map((it) => (
+                  <tr key={it.id}>
+                    <td><input type="checkbox" checked={selected.has(it.id)} onChange={() => toggleSelect(it.id)} /></td>
+                    <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{new Date(it.change_timestamp).toLocaleString()}</td>
+                    <td><span className="badge badge-slate">{it.master_type}</span></td>
+                    <td><strong>{it.record_name || it.record_id}</strong></td>
+                    <td>{it.field_name}</td>
+                    <td style={{ fontSize: 12 }}><span style={{ color: "var(--slate)" }}>{it.old_value || "—"}</span> → <span style={{ color: "var(--navy)" }}>{it.new_value || "—"}</span></td>
+                    <td>{it.change_user || "—"}</td>
+                    <td><span className={`badge ${badge(it.approval_status)}`}>{it.approval_status}</span></td>
+                    <td style={{ textAlign: "right" }}><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/change-logs/${it.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -266,9 +325,17 @@ function MakerCheckerSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "*", required_approvers: 1, description: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/workflows`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.field_name + it.description).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/workflows`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -278,6 +345,10 @@ function MakerCheckerSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/workflows/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -298,23 +369,29 @@ function MakerCheckerSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No workflow rules configured.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Field</th><th>Approvers</th><th>Active</th><th>Description</th><th></th></tr></thead>
-            <tbody>
-              {items.map((w) => (
-                <tr key={w.id}>
-                  <td><span className="badge badge-slate">{w.master_type}</span></td>
-                  <td>{w.field_name}</td>
-                  <td>{w.required_approvers}</td>
-                  <td><span className={`badge ${w.is_active ? "badge-success" : "badge-danger"}`}>{w.is_active ? "Yes" : "No"}</span></td>
-                  <td style={{ color: "var(--slate)" }}>{w.description || "—"}</td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/workflows/${w.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("workflows.csv", ["Master","Field","Approvers","Active","Description"],
+              filtered.map((w) => [w.master_type, w.field_name, w.required_approvers, w.is_active?"Yes":"No", w.description]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Master</th><th>Field</th><th>Approvers</th><th>Active</th><th>Description</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((w) => (
+                  <tr key={w.id}>
+                    <td><input type="checkbox" checked={selected.has(w.id)} onChange={() => toggleSelect(w.id)} /></td>
+                    <td><span className="badge badge-slate">{w.master_type}</span></td>
+                    <td>{w.field_name}</td>
+                    <td>{w.required_approvers}</td>
+                    <td><span className={`badge ${w.is_active ? "badge-success" : "badge-danger"}`}>{w.is_active ? "Yes" : "No"}</span></td>
+                    <td style={{ color: "var(--slate)" }}>{w.description || "—"}</td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/workflows/${w.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -402,9 +479,17 @@ function BulkUploadSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ filename: "", master_type: "chart_of_accounts", uploaded_by: "", record_count: 0, success_count: 0, failure_count: 0, status: "completed", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/bulk-uploads`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.filename + it.master_type + it.uploaded_by + it.status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/bulk-uploads`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -415,6 +500,9 @@ function BulkUploadSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -437,24 +525,30 @@ function BulkUploadSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No bulk uploads logged.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Filename</th><th>Master</th><th>By</th><th>Total</th><th>OK</th><th>Fail</th><th>Status</th></tr></thead>
-            <tbody>
-              {items.map((u) => (
-                <tr key={u.id}>
-                  <td><strong>{u.filename}</strong></td>
-                  <td><span className="badge badge-slate">{u.master_type}</span></td>
-                  <td>{u.uploaded_by || "—"}</td>
-                  <td>{u.record_count}</td>
-                  <td style={{ color: "var(--green, #16a34a)" }}>{u.success_count}</td>
-                  <td style={{ color: "var(--red, #dc2626)" }}>{u.failure_count}</td>
-                  <td><span className={`badge ${badge(u.status)}`}>{u.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={async () => {}} 
+            onCsv={() => exportCsv("bulk-uploads.csv", ["Filename","Master","By","Total","OK","Fail","Status"],
+              filtered.map((u) => [u.filename, u.master_type, u.uploaded_by, u.record_count, u.success_count, u.failure_count, u.status]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Filename</th><th>Master</th><th>By</th><th>Total</th><th>OK</th><th>Fail</th><th>Status</th></tr></thead>
+              <tbody>
+                {filtered.map((u) => (
+                  <tr key={u.id}>
+                    <td><input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)} /></td>
+                    <td><strong>{u.filename}</strong></td>
+                    <td><span className="badge badge-slate">{u.master_type}</span></td>
+                    <td>{u.uploaded_by || "—"}</td>
+                    <td>{u.record_count}</td>
+                    <td style={{ color: "var(--green, #16a34a)" }}>{u.success_count}</td>
+                    <td style={{ color: "var(--red, #dc2626)" }}>{u.failure_count}</td>
+                    <td><span className={`badge ${badge(u.status)}`}>{u.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -467,9 +561,17 @@ function FieldAccessSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "", role: "auditor", can_edit: false, can_view: true });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/field-access`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.field_name + it.role).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/field-access`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -480,6 +582,10 @@ function FieldAccessSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/field-access/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -504,23 +610,29 @@ function FieldAccessSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No field access configs defined.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Field</th><th>Role</th><th>Edit</th><th>View</th><th></th></tr></thead>
-            <tbody>
-              {items.map((fa) => (
-                <tr key={fa.id}>
-                  <td><span className="badge badge-slate">{fa.master_type}</span></td>
-                  <td>{fa.field_name}</td>
-                  <td>{fa.role}</td>
-                  <td><span className={`badge ${fa.can_edit ? "badge-success" : "badge-danger"}`}>{fa.can_edit ? "Yes" : "No"}</span></td>
-                  <td><span className={`badge ${fa.can_view ? "badge-success" : "badge-danger"}`}>{fa.can_view ? "Yes" : "No"}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/field-access/${fa.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("field-access.csv", ["Master","Field","Role","Edit","View"],
+              filtered.map((fa) => [fa.master_type, fa.field_name, fa.role, fa.can_edit?"Yes":"No", fa.can_view?"Yes":"No"]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Master</th><th>Field</th><th>Role</th><th>Edit</th><th>View</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((fa) => (
+                  <tr key={fa.id}>
+                    <td><input type="checkbox" checked={selected.has(fa.id)} onChange={() => toggleSelect(fa.id)} /></td>
+                    <td><span className="badge badge-slate">{fa.master_type}</span></td>
+                    <td>{fa.field_name}</td>
+                    <td>{fa.role}</td>
+                    <td><span className={`badge ${fa.can_edit ? "badge-success" : "badge-danger"}`}>{fa.can_edit ? "Yes" : "No"}</span></td>
+                    <td><span className={`badge ${fa.can_view ? "badge-success" : "badge-danger"}`}>{fa.can_view ? "Yes" : "No"}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/field-access/${fa.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -533,7 +645,14 @@ function QualitySection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({ master_type: "chart_of_accounts", dimension: "completeness", score: 0, total_records: 0, passing_records: 0, notes: "" });
+
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.dimension).toLowerCase().includes(q);
+  });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/quality-scores`)); setLoading(false); }
   useEffect(() => { refresh(); }, []);
@@ -569,22 +688,27 @@ function QualitySection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No quality scores recorded.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Dimension</th><th>Score</th><th>Pass / Total</th><th>Evaluated</th></tr></thead>
-            <tbody>
-              {items.map((q) => (
-                <tr key={q.id}>
-                  <td><span className="badge badge-slate">{q.master_type}</span></td>
-                  <td>{q.dimension}</td>
-                  <td><span className={`badge ${scoreBadge(q.score, 90, 70)}`}>{q.score}%</span></td>
-                  <td>{q.passing_records} / {q.total_records}</td>
-                  <td style={{ fontSize: 12 }}>{new Date(q.evaluated_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={new Set()} onDelete={() => {}}
+            onCsv={() => exportCsv("quality-scores.csv", ["Master","Dimension","Score","Pass","Total","Evaluated"],
+              filtered.map((q) => [q.master_type, q.dimension, q.score+"%", q.passing_records, q.total_records, new Date(q.evaluated_at).toLocaleString()]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th>Master</th><th>Dimension</th><th>Score</th><th>Pass / Total</th><th>Evaluated</th></tr></thead>
+              <tbody>
+                {filtered.map((q) => (
+                  <tr key={q.id}>
+                    <td><span className="badge badge-slate">{q.master_type}</span></td>
+                    <td>{q.dimension}</td>
+                    <td><span className={`badge ${scoreBadge(q.score, 90, 70)}`}>{q.score}%</span></td>
+                    <td>{q.passing_records} / {q.total_records}</td>
+                    <td style={{ fontSize: 12 }}>{new Date(q.evaluated_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -597,9 +721,17 @@ function DuplicatesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_a_id: "", record_a_name: "", record_b_id: "", record_b_name: "", match_score: 80, status: "open" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/duplicates`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.record_a_id + it.record_a_name + it.record_b_id + it.record_b_name + it.status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/duplicates`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -610,6 +742,9 @@ function DuplicatesSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -632,28 +767,34 @@ function DuplicatesSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No duplicate pairs detected.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Record A</th><th>Record B</th><th>Match</th><th>Status</th></tr></thead>
-            <tbody>
-              {items.map((d) => (
-                <tr key={d.id}>
-                  <td><span className="badge badge-slate">{d.master_type}</span></td>
-                  <td><strong>{d.record_a_name || d.record_a_id}</strong></td>
-                  <td><strong>{d.record_b_name || d.record_b_id}</strong></td>
-                  <td><span className={`badge ${d.match_score >= 90 ? "badge-danger" : d.match_score >= 70 ? "badge-gold" : "badge-success"}`}>{d.match_score}%</span></td>
-                  <td>
-                    <select className="select" value={d.status} onChange={async (e) => { await patch(`/api/modules/${SLUG}/duplicates/${d.id}`, { status: e.target.value }); refresh(); }} style={{ padding: "4px 8px", fontSize: 12 }}>
-                      <option value="open">Open</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="false_positive">False Positive</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={() => {}}
+            onCsv={() => exportCsv("duplicates.csv", ["Master","Record A","Record B","Match","Status"],
+              filtered.map((d) => [d.master_type, d.record_a_name||d.record_a_id, d.record_b_name||d.record_b_id, d.match_score+"%", d.status]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Master</th><th>Record A</th><th>Record B</th><th>Match</th><th>Status</th></tr></thead>
+              <tbody>
+                {filtered.map((d) => (
+                  <tr key={d.id}>
+                    <td><input type="checkbox" checked={selected.has(d.id)} onChange={() => toggleSelect(d.id)} /></td>
+                    <td><span className="badge badge-slate">{d.master_type}</span></td>
+                    <td><strong>{d.record_a_name || d.record_a_id}</strong></td>
+                    <td><strong>{d.record_b_name || d.record_b_id}</strong></td>
+                    <td><span className={`badge ${d.match_score >= 90 ? "badge-danger" : d.match_score >= 70 ? "badge-gold" : "badge-success"}`}>{d.match_score}%</span></td>
+                    <td>
+                      <select className="select" value={d.status} onChange={async (e) => { await patch(`/api/modules/${SLUG}/duplicates/${d.id}`, { status: e.target.value }); refresh(); }} style={{ padding: "4px 8px", fontSize: 12 }}>
+                        <option value="open">Open</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="false_positive">False Positive</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -666,9 +807,17 @@ function ReferenceSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ code_system: "", code_value: "", code_description: "", module_a: "", module_b: "", is_consistent: true, notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reference-data`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.code_system + it.code_value + it.code_description + it.module_a + it.module_b).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reference-data`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -697,22 +846,28 @@ function ReferenceSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No reference data entries.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>System</th><th>Code</th><th>Module A</th><th>Module B</th><th>Consistent</th></tr></thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.code_system}</td>
-                  <td><strong>{r.code_value}</strong></td>
-                  <td>{r.module_a || "—"}</td>
-                  <td>{r.module_b || "—"}</td>
-                  <td><span className={`badge ${r.is_consistent ? "badge-success" : "badge-danger"}`}>{r.is_consistent ? "Yes" : "No"}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={() => {}}
+            onCsv={() => exportCsv("reference-data.csv", ["System","Code","Description","Module A","Module B","Consistent"],
+              filtered.map((r) => [r.code_system, r.code_value, r.code_description, r.module_a, r.module_b, r.is_consistent?"Yes":"No"]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={() => setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id)))} /></th><th>System</th><th>Code</th><th>Module A</th><th>Module B</th><th>Consistent</th></tr></thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => setSelected((p) => { const n = new Set(p); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })} /></td>
+                    <td>{r.code_system}</td>
+                    <td><strong>{r.code_value}</strong></td>
+                    <td>{r.module_a || "—"}</td>
+                    <td>{r.module_b || "—"}</td>
+                    <td><span className={`badge ${r.is_consistent ? "badge-success" : "badge-danger"}`}>{r.is_consistent ? "Yes" : "No"}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -724,6 +879,14 @@ function ReferenceSection() {
 function AgeingSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.record_name + it.record_id + it.field_name + it.change_user).toLowerCase().includes(q);
+  });
+
   useEffect(() => { get<any[]>(`/api/modules/${SLUG}/approval-ageing`).then((d) => { setItems(d); setLoading(false); }); }, []);
 
   return (
@@ -735,26 +898,31 @@ function AgeingSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No pending approvals.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Record</th><th>Field</th><th>Requested</th><th>Days Open</th><th>User</th></tr></thead>
-            <tbody>
-              {items.map((a) => {
-                const days = Math.floor((Date.now() - new Date(a.change_timestamp).getTime()) / 86400000);
-                return (
-                  <tr key={a.id}>
-                    <td><span className="badge badge-slate">{a.master_type}</span></td>
-                    <td><strong>{a.record_name || a.record_id}</strong></td>
-                    <td>{a.field_name}</td>
-                    <td style={{ fontSize: 12 }}>{new Date(a.change_timestamp).toLocaleDateString()}</td>
-                    <td><span className={`badge ${days > 7 ? "badge-danger" : days > 3 ? "badge-gold" : "badge-success"}`}>{days}d</span></td>
-                    <td>{a.change_user || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={new Set()} onDelete={() => {}}
+            onCsv={() => exportCsv("approval-ageing.csv", ["Master","Record","Field","Requested","Days Open","User"],
+              filtered.map((a) => { const days = Math.floor((Date.now() - new Date(a.change_timestamp).getTime()) / 86400000); return [a.master_type, a.record_name||a.record_id, a.field_name, new Date(a.change_timestamp).toLocaleDateString(), days+"d", a.change_user]; }))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th>Master</th><th>Record</th><th>Field</th><th>Requested</th><th>Days Open</th><th>User</th></tr></thead>
+              <tbody>
+                {filtered.map((a) => {
+                  const days = Math.floor((Date.now() - new Date(a.change_timestamp).getTime()) / 86400000);
+                  return (
+                    <tr key={a.id}>
+                      <td><span className="badge badge-slate">{a.master_type}</span></td>
+                      <td><strong>{a.record_name || a.record_id}</strong></td>
+                      <td>{a.field_name}</td>
+                      <td style={{ fontSize: 12 }}>{new Date(a.change_timestamp).toLocaleDateString()}</td>
+                      <td><span className={`badge ${days > 7 ? "badge-danger" : days > 3 ? "badge-gold" : "badge-success"}`}>{days}d</span></td>
+                      <td>{a.change_user || "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -767,9 +935,17 @@ function ReconciliationSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_id: "", source_system: "", target_system: "", source_hash: "", target_hash: "", status: "pending", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reconciliation`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.record_id + it.source_system + it.target_system + it.status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reconciliation`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -804,23 +980,29 @@ function ReconciliationSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No reconciliation records.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Record</th><th>Source</th><th>Target</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td><span className="badge badge-slate">{r.master_type}</span></td>
-                  <td><strong>{r.record_id}</strong></td>
-                  <td>{r.source_system || "—"}</td>
-                  <td>{r.target_system || "—"}</td>
-                  <td><span className={`badge ${badge(r.status)}`}>{r.status}</span></td>
-                  <td style={{ fontSize: 12 }}>{new Date(r.reconciled_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={() => {}}
+            onCsv={() => exportCsv("reconciliation.csv", ["Master","Record","Source","Target","Status","Date"],
+              filtered.map((r) => [r.master_type, r.record_id, r.source_system, r.target_system, r.status, new Date(r.reconciled_at).toLocaleDateString()]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={() => setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id)))} /></th><th>Master</th><th>Record</th><th>Source</th><th>Target</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => setSelected((p) => { const n = new Set(p); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })} /></td>
+                    <td><span className="badge badge-slate">{r.master_type}</span></td>
+                    <td><strong>{r.record_id}</strong></td>
+                    <td>{r.source_system || "—"}</td>
+                    <td>{r.target_system || "—"}</td>
+                    <td><span className={`badge ${badge(r.status)}`}>{r.status}</span></td>
+                    <td style={{ fontSize: 12 }}>{new Date(r.reconciled_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -833,9 +1015,17 @@ function AlertingSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "*", threshold: 1, recipients: "", message: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/alerts`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.master_type + it.field_name + it.recipients + it.message).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/alerts`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -866,24 +1056,30 @@ function AlertingSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No alert rules configured.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Master</th><th>Field</th><th>Threshold</th><th>Recipients</th><th>Active</th><th>Triggered</th><th></th></tr></thead>
-            <tbody>
-              {items.map((a) => (
-                <tr key={a.id}>
-                  <td><span className="badge badge-slate">{a.master_type}</span></td>
-                  <td>{a.field_name}</td>
-                  <td>{a.threshold}</td>
-                  <td style={{ fontSize: 12 }}>{a.recipients || "—"}</td>
-                  <td><span className={`badge ${a.is_active ? "badge-success" : "badge-slate"}`}>{a.is_active ? "Active" : "Inactive"}</span></td>
-                  <td style={{ fontSize: 12 }}>{a.triggered_at ? new Date(a.triggered_at).toLocaleString() : "—"}</td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await post(`/api/modules/${SLUG}/alerts/${a.id}/trigger`); refresh(); }}>Trigger</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={() => {}}
+            onCsv={() => exportCsv("alerts.csv", ["Master","Field","Threshold","Recipients","Active","Triggered"],
+              filtered.map((a) => [a.master_type, a.field_name, a.threshold, a.recipients, a.is_active?"Active":"Inactive", a.triggered_at ? new Date(a.triggered_at).toLocaleString() : ""]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={() => setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id)))} /></th><th>Master</th><th>Field</th><th>Threshold</th><th>Recipients</th><th>Active</th><th>Triggered</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((a) => (
+                  <tr key={a.id}>
+                    <td><input type="checkbox" checked={selected.has(a.id)} onChange={() => setSelected((p) => { const n = new Set(p); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} /></td>
+                    <td><span className="badge badge-slate">{a.master_type}</span></td>
+                    <td>{a.field_name}</td>
+                    <td>{a.threshold}</td>
+                    <td style={{ fontSize: 12 }}>{a.recipients || "—"}</td>
+                    <td><span className={`badge ${a.is_active ? "badge-success" : "badge-slate"}`}>{a.is_active ? "Active" : "Inactive"}</span></td>
+                    <td style={{ fontSize: 12 }}>{a.triggered_at ? new Date(a.triggered_at).toLocaleString() : "—"}</td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await post(`/api/modules/${SLUG}/alerts/${a.id}/trigger`); refresh(); }}>Trigger</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -896,9 +1092,17 @@ function ScopeSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ entity_type: "GL", entity_name: "", description: "", risk_rating: "Medium" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/scope`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.entity_type + it.entity_name + it.description + it.risk_rating).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/scope`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -909,6 +1113,10 @@ function ScopeSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/scope/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -932,22 +1140,28 @@ function ScopeSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No scope items defined.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Type</th><th>Entity</th><th>Description</th><th>Risk</th><th></th></tr></thead>
-            <tbody>
-              {items.map((s) => (
-                <tr key={s.id}>
-                  <td><span className="badge badge-slate">{s.entity_type}</span></td>
-                  <td><strong>{s.entity_name}</strong></td>
-                  <td style={{ color: "var(--slate)" }}>{s.description || "—"}</td>
-                  <td><span className={`badge ${badge(s.risk_rating)}`}>{s.risk_rating}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/scope/${s.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("scope.csv", ["Type","Entity","Description","Risk"],
+              filtered.map((s) => [s.entity_type, s.entity_name, s.description, s.risk_rating]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Type</th><th>Entity</th><th>Description</th><th>Risk</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr key={s.id}>
+                    <td><input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelect(s.id)} /></td>
+                    <td><span className="badge badge-slate">{s.entity_type}</span></td>
+                    <td><strong>{s.entity_name}</strong></td>
+                    <td style={{ color: "var(--slate)" }}>{s.description || "—"}</td>
+                    <td><span className={`badge ${badge(s.risk_rating)}`}>{s.risk_rating}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/scope/${s.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -960,9 +1174,17 @@ function RcmSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ risk_id: "", risk_description: "", control_id: "", control_description: "", assertion: "", control_type: "Preventive", control_owner: "", frequency: "Quarterly" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rcm`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.risk_id + it.risk_description + it.control_id + it.control_description + it.control_type + it.control_owner).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rcm`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -973,6 +1195,10 @@ function RcmSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/rcm/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1000,23 +1226,29 @@ function RcmSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No RCM entries.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Risk</th><th>Control</th><th>Type</th><th>Owner</th><th>Frequency</th><th></th></tr></thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td><strong>{r.risk_id}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.risk_description}</div></td>
-                  <td><strong>{r.control_id}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.control_description}</div></td>
-                  <td><span className="badge badge-slate">{r.control_type}</span></td>
-                  <td>{r.control_owner || "—"}</td>
-                  <td>{r.frequency}</td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/rcm/${r.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("rcm.csv", ["Risk ID","Risk Desc","Control ID","Control Desc","Type","Owner","Frequency"],
+              filtered.map((r) => [r.risk_id, r.risk_description, r.control_id, r.control_description, r.control_type, r.control_owner, r.frequency]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Risk</th><th>Control</th><th>Type</th><th>Owner</th><th>Frequency</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} /></td>
+                    <td><strong>{r.risk_id}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.risk_description}</div></td>
+                    <td><strong>{r.control_id}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.control_description}</div></td>
+                    <td><span className="badge badge-slate">{r.control_type}</span></td>
+                    <td>{r.control_owner || "—"}</td>
+                    <td>{r.frequency}</td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/rcm/${r.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1029,9 +1261,17 @@ function RulesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ rule_name: "", rule_type: "Red-Flag", master_type: "chart_of_accounts", threshold: "", caat_script: "", is_active: true });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rules`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.rule_name + it.rule_type + it.master_type + it.threshold).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rules`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1042,6 +1282,10 @@ function RulesSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/rules/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1066,23 +1310,29 @@ function RulesSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No rules defined.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Rule</th><th>Type</th><th>Master</th><th>Threshold</th><th>Active</th><th></th></tr></thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td><strong>{r.rule_name}</strong></td>
-                  <td><span className="badge badge-slate">{r.rule_type}</span></td>
-                  <td>{r.master_type}</td>
-                  <td>{r.threshold || "—"}</td>
-                  <td><span className={`badge ${r.is_active ? "badge-success" : "badge-danger"}`}>{r.is_active ? "Yes" : "No"}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/rules/${r.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("rules.csv", ["Rule","Type","Master","Threshold","Active"],
+              filtered.map((r) => [r.rule_name, r.rule_type, r.master_type, r.threshold||"", r.is_active?"Yes":"No"]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Rule</th><th>Type</th><th>Master</th><th>Threshold</th><th>Active</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} /></td>
+                    <td><strong>{r.rule_name}</strong></td>
+                    <td><span className="badge badge-slate">{r.rule_type}</span></td>
+                    <td>{r.master_type}</td>
+                    <td>{r.threshold || "—"}</td>
+                    <td><span className={`badge ${r.is_active ? "badge-success" : "badge-danger"}`}>{r.is_active ? "Yes" : "No"}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/rules/${r.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1095,9 +1345,17 @@ function DataSourcesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ source_name: "", source_type: "ERP", connection_detail: "", table_mapping: "", is_active: true });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/data-sources`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.source_name + it.source_type + it.connection_detail + it.table_mapping).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/data-sources`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1108,6 +1366,10 @@ function DataSourcesSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/data-sources/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1128,23 +1390,29 @@ function DataSourcesSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No data sources configured.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Source</th><th>Type</th><th>Connection</th><th>Mapping</th><th>Active</th><th></th></tr></thead>
-            <tbody>
-              {items.map((d) => (
-                <tr key={d.id}>
-                  <td><strong>{d.source_name}</strong></td>
-                  <td><span className="badge badge-slate">{d.source_type}</span></td>
-                  <td style={{ fontSize: 12, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{d.connection_detail || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{d.table_mapping || "—"}</td>
-                  <td><span className={`badge ${d.is_active ? "badge-success" : "badge-danger"}`}>{d.is_active ? "Yes" : "No"}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/data-sources/${d.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("data-sources.csv", ["Source","Type","Connection","Mapping","Active"],
+              filtered.map((d) => [d.source_name, d.source_type, d.connection_detail, d.table_mapping, d.is_active?"Yes":"No"]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Source</th><th>Type</th><th>Connection</th><th>Mapping</th><th>Active</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((d) => (
+                  <tr key={d.id}>
+                    <td><input type="checkbox" checked={selected.has(d.id)} onChange={() => toggleSelect(d.id)} /></td>
+                    <td><strong>{d.source_name}</strong></td>
+                    <td><span className="badge badge-slate">{d.source_type}</span></td>
+                    <td style={{ fontSize: 12, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{d.connection_detail || "—"}</td>
+                    <td style={{ fontSize: 12 }}>{d.table_mapping || "—"}</td>
+                    <td><span className={`badge ${d.is_active ? "badge-success" : "badge-danger"}`}>{d.is_active ? "Yes" : "No"}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/data-sources/${d.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1157,9 +1425,17 @@ function SamplingSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ population_name: "", population_size: 0, sample_size: 0, sample_method: "Random", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/sampling`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.population_name + it.sample_method).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/sampling`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1170,6 +1446,10 @@ function SamplingSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/sampling/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1190,22 +1470,28 @@ function SamplingSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No sampling records.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Population</th><th>Pop. Size</th><th>Sample</th><th>Method</th><th></th></tr></thead>
-            <tbody>
-              {items.map((s) => (
-                <tr key={s.id}>
-                  <td><strong>{s.population_name}</strong></td>
-                  <td>{s.population_size.toLocaleString()}</td>
-                  <td>{s.sample_size.toLocaleString()}</td>
-                  <td><span className="badge badge-slate">{s.sample_method}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/sampling/${s.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("sampling.csv", ["Population","Pop. Size","Sample","Method"],
+              filtered.map((s) => [s.population_name, s.population_size, s.sample_size, s.sample_method]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Population</th><th>Pop. Size</th><th>Sample</th><th>Method</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr key={s.id}>
+                    <td><input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelect(s.id)} /></td>
+                    <td><strong>{s.population_name}</strong></td>
+                    <td>{s.population_size.toLocaleString()}</td>
+                    <td>{s.sample_size.toLocaleString()}</td>
+                    <td><span className="badge badge-slate">{s.sample_method}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/sampling/${s.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1218,9 +1504,17 @@ function ExceptionsSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ exception_type: "", description: "", severity: "Medium", status: "Open", assigned_to: "", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/exceptions`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.exception_type + it.description + it.severity + it.status + it.assigned_to).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/exceptions`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1236,6 +1530,10 @@ function ExceptionsSection() {
     await patch(`/api/modules/${SLUG}/exceptions/${id}`, { status });
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/exceptions/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1256,27 +1554,33 @@ function ExceptionsSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No exceptions in queue.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Type</th><th>Description</th><th>Severity</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
-            <tbody>
-              {items.map((ex) => (
-                <tr key={ex.id}>
-                  <td><strong>{ex.exception_type}</strong></td>
-                  <td style={{ color: "var(--slate)" }}>{ex.description || "—"}</td>
-                  <td><span className={`badge ${badge(ex.severity)}`}>{ex.severity}</span></td>
-                  <td>
-                    <select className="select" value={ex.status} onChange={(e) => updateStatus(ex.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
-                      {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td>{ex.assigned_to || "—"}</td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/exceptions/${ex.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("exceptions.csv", ["Type","Description","Severity","Status","Assigned"],
+              filtered.map((ex) => [ex.exception_type, ex.description, ex.severity, ex.status, ex.assigned_to]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Type</th><th>Description</th><th>Severity</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((ex) => (
+                  <tr key={ex.id}>
+                    <td><input type="checkbox" checked={selected.has(ex.id)} onChange={() => toggleSelect(ex.id)} /></td>
+                    <td><strong>{ex.exception_type}</strong></td>
+                    <td style={{ color: "var(--slate)" }}>{ex.description || "—"}</td>
+                    <td><span className={`badge ${badge(ex.severity)}`}>{ex.severity}</span></td>
+                    <td>
+                      <select className="select" value={ex.status} onChange={(e) => updateStatus(ex.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                        {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td>{ex.assigned_to || "—"}</td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/exceptions/${ex.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1289,9 +1593,17 @@ function WorkingPapersSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ title: "", description: "", paper_type: "Evidence", reference_url: "", status: "Draft" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/working-papers`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.title + it.description + it.paper_type + it.status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/working-papers`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1302,6 +1614,10 @@ function WorkingPapersSection() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/working-papers/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1322,21 +1638,27 @@ function WorkingPapersSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No working papers.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Title</th><th>Type</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {items.map((w) => (
-                <tr key={w.id}>
-                  <td><strong>{w.title}</strong></td>
-                  <td><span className="badge badge-slate">{w.paper_type}</span></td>
-                  <td><span className={`badge ${badge(w.status)}`}>{w.status}</span></td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/working-papers/${w.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("working-papers.csv", ["Title","Type","Description","Status"],
+              filtered.map((w) => [w.title, w.paper_type, w.description, w.status]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Title</th><th>Type</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((w) => (
+                  <tr key={w.id}>
+                    <td><input type="checkbox" checked={selected.has(w.id)} onChange={() => toggleSelect(w.id)} /></td>
+                    <td><strong>{w.title}</strong></td>
+                    <td><span className="badge badge-slate">{w.paper_type}</span></td>
+                    <td><span className={`badge ${badge(w.status)}`}>{w.status}</span></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/working-papers/${w.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1349,9 +1671,17 @@ function FindingsSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ finding_title: "", description: "", severity: "Medium", status: "Open", assigned_to: "", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/findings`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.finding_title + it.description + it.severity + it.status + it.assigned_to).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/findings`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1367,6 +1697,10 @@ function FindingsSection() {
     await patch(`/api/modules/${SLUG}/findings/${id}`, { status });
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/findings/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1387,26 +1721,32 @@ function FindingsSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No findings logged.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Finding</th><th>Severity</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
-            <tbody>
-              {items.map((f) => (
-                <tr key={f.id}>
-                  <td><strong>{f.finding_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{f.description}</div></td>
-                  <td><span className={`badge ${badge(f.severity)}`}>{f.severity}</span></td>
-                  <td>
-                    <select className="select" value={f.status} onChange={(e) => updateStatus(f.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
-                      {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td>{f.assigned_to || "—"}</td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/findings/${f.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("findings.csv", ["Finding","Description","Severity","Status","Assigned"],
+              filtered.map((f) => [f.finding_title, f.description, f.severity, f.status, f.assigned_to]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Finding</th><th>Severity</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((f) => (
+                  <tr key={f.id}>
+                    <td><input type="checkbox" checked={selected.has(f.id)} onChange={() => toggleSelect(f.id)} /></td>
+                    <td><strong>{f.finding_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{f.description}</div></td>
+                    <td><span className={`badge ${badge(f.severity)}`}>{f.severity}</span></td>
+                    <td>
+                      <select className="select" value={f.status} onChange={(e) => updateStatus(f.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                        {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td>{f.assigned_to || "—"}</td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/findings/${f.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1419,9 +1759,17 @@ function RemediationSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ action_title: "", description: "", owner: "", status: "Planned", notes: "" });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/remediation`)); setLoading(false); }
+  const filtered = items.filter((it) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (it.action_title + it.description + it.owner + it.status).toLowerCase().includes(q);
+  });
+
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/remediation`)); setLoading(false); setSelected(new Set()); }
   useEffect(() => { refresh(); }, []);
 
   async function add(e: React.FormEvent) {
@@ -1437,6 +1785,10 @@ function RemediationSection() {
     await patch(`/api/modules/${SLUG}/remediation/${id}`, { status });
     refresh();
   }
+
+  function toggleSelect(id: number) { setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+  function toggleAll() { setSelected((p) => p.size === filtered.length ? new Set<number>() : new Set(filtered.map((i) => i.id))); }
+  async function bulkDelete() { for (const id of selected) await del(`/api/modules/${SLUG}/remediation/${id}`); refresh(); }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -1457,25 +1809,31 @@ function RemediationSection() {
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No remediation items.</p>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <table>
-            <thead><tr><th>Action</th><th>Owner</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td><strong>{r.action_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.description}</div></td>
-                  <td>{r.owner || "—"}</td>
-                  <td>
-                    <select className="select" value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
-                      {["Planned", "In Progress", "Completed"].map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/remediation/${r.id}`); refresh(); }}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TableToolbar search={search} setSearch={setSearch} selected={selected} onDelete={bulkDelete}
+            onCsv={() => exportCsv("remediation.csv", ["Action","Description","Owner","Status"],
+              filtered.map((r) => [r.action_title, r.description, r.owner, r.status]))} />
+          <div className="card" style={{ overflow: "hidden" }}>
+            <table>
+              <thead><tr><th style={{ width: 36 }}><input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} /></th><th>Action</th><th>Owner</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.id}>
+                    <td><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} /></td>
+                    <td><strong>{r.action_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.description}</div></td>
+                    <td>{r.owner || "—"}</td>
+                    <td>
+                      <select className="select" value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                        {["Planned", "In Progress", "Completed"].map((s) => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/remediation/${r.id}`); refresh(); }}>Delete</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
