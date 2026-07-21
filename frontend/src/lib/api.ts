@@ -1,7 +1,7 @@
 /** Tiny typed fetch wrapper. Injects the JWT and unwraps JSON/errors. */
 const TOKEN_KEY = "iaos_token";
 
-const API_BASE_URL = "https://iaos-intern.onrender.com";
+const API_BASE_URL = "http://localhost:8000";
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
