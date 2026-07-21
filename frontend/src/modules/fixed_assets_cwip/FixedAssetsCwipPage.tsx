@@ -1155,7 +1155,7 @@ function ShellFeatureView({ feature }: { feature: FeatureDef }) {
   return (
     <div>
       {/* Status banner */}
-      {data.status && (
+      {data.status ? (
         <div className="alert" style={{
           background: "var(--gold-tint)",
           color: "var(--gold-strong)",
@@ -1164,7 +1164,7 @@ function ShellFeatureView({ feature }: { feature: FeatureDef }) {
         }}>
           ⚠ {String(data.status)}
         </div>
-      )}
+      ) : null}
 
       {/* Render each key in the response */}
       {Object.entries(data).map(([key, value]) => {
