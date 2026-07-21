@@ -7,6 +7,7 @@ interface Finding {
   id: number; finding_number: string; title: string; category: string;
   severity: string; status: string; financial_impact: number;
   description: string; impact: string; recommendation: string;
+  source_reference: string;
 }
 
 export default function FindingsPage() {
