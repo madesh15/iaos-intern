@@ -1,0 +1,89 @@
+import { useEffect, useState } from "react";
+import { get, post, del } from "../../../lib/api";
+
+const BASE = "/api/modules/data_privacy_dpdp";
+
+export default function SimplePrivacyListTab({
+  endpoint,
+  columns,
+  emptyItem,
+}: {
+  endpoint: string;
+  columns: string[];
+  emptyItem: Record<string, unknown>;
+}) {
+  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
+  const [form, setForm] = useState<Record<string, unknown>>(emptyItem);
+
+  const load = () => get<Record<string, unknown>[]>(`${BASE}/${endpoint}`).then(setRows);
+  useEffect(() => {
+    load();
+  }, [endpoint]);
+
+  const create = async () => {
+    await post(`${BASE}/${endpoint}`, form);
+    setForm(emptyItem);
+    load();
+  };
+
+  const remove = async (id: number) => {
+    await del(`${BASE}/${endpoint}/${id}`);
+    load();
+  };
+
+  return (
+    <div>
+      <div className="card" style={{ padding: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {columns.map((col) => (
+            <input
+              key={col}
+              className="input"
+              placeholder={col.replace(/_/g, " ")}
+              value={String(form[col] ?? "")}
+              onChange={(e) => setForm({ ...form, [col]: e.target.value })}
+            />
+          ))}
+          <button className="btn" onClick={create}>
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className="card" style={{ overflow: "hidden" }}>
+        <table>
+          <thead>
+            <tr>
+              {columns.map((c) => (
+                <th key={c}>{c.replace(/_/g, " ")}</th>
+              ))}
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length + 1} style={{ opacity: 0.5, textAlign: "center" }}>
+                  No records yet.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.id as number}>
+                  {columns.map((c) => (
+                    <td key={c}>{String(r[c] ?? "")}</td>
+                  ))}
+                  <td>
+                    <button className="btn" onClick={() => remove(r.id as number)}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
