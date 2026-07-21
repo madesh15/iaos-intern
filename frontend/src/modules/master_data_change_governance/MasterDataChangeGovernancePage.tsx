@@ -51,6 +51,15 @@ function scoreBadge(n: number, hi: number, lo: number) {
   return "badge-danger";
 }
 
+function SavedBanner({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div className="alert alert-success" style={{ marginBottom: 14, background: "var(--success-tint)", color: "var(--success)", border: "1px solid rgba(18, 128, 92, 0.18)" }}>
+      Saved successfully.
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════
    MAIN PAGE
    ══════════════════════════════════════════════════════════════ */
@@ -184,6 +193,7 @@ function DashboardSection() {
 function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Change Log" }: { endpoint?: string; title?: string }) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_id: "", record_name: "", field_name: "", old_value: "", new_value: "", change_type: "update", change_user: "", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/${endpoint}`)); setLoading(false); }
@@ -194,12 +204,14 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
     if (!form.record_id.trim() || !form.field_name.trim()) return;
     await post(`/api/modules/${SLUG}/change-logs`, form);
     setForm({ ...form, record_id: "", record_name: "", field_name: "", old_value: "", new_value: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>{title}</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Master Type</label>
@@ -253,6 +265,7 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
 function MakerCheckerSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "*", required_approvers: 1, description: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/workflows`)); setLoading(false); }
@@ -262,12 +275,14 @@ function MakerCheckerSection() {
     e.preventDefault();
     await post(`/api/modules/${SLUG}/workflows`, form);
     setForm({ ...form, field_name: "*", description: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Maker-Checker Enforcement</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 150 }}><label>Master Type</label>
@@ -386,6 +401,7 @@ function OrphanSection() {
 function BulkUploadSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ filename: "", master_type: "chart_of_accounts", uploaded_by: "", record_count: 0, success_count: 0, failure_count: 0, status: "completed", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/bulk-uploads`)); setLoading(false); }
@@ -396,12 +412,14 @@ function BulkUploadSection() {
     if (!form.filename.trim()) return;
     await post(`/api/modules/${SLUG}/bulk-uploads`, form);
     setForm({ ...form, filename: "", record_count: 0, success_count: 0, failure_count: 0, notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Bulk-Upload Controls</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 2, minWidth: 200 }}><label>Filename</label><input className="input" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} required /></div>
@@ -448,6 +466,7 @@ function BulkUploadSection() {
 function FieldAccessSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "", role: "auditor", can_edit: false, can_view: true });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/field-access`)); setLoading(false); }
@@ -458,12 +477,14 @@ function FieldAccessSection() {
     if (!form.field_name.trim()) return;
     await post(`/api/modules/${SLUG}/field-access`, form);
     setForm({ ...form, field_name: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Field-Level Access Review</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Master Type</label>
@@ -511,6 +532,7 @@ function FieldAccessSection() {
 function QualitySection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", dimension: "completeness", score: 0, total_records: 0, passing_records: 0, notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/quality-scores`)); setLoading(false); }
@@ -520,12 +542,14 @@ function QualitySection() {
     e.preventDefault();
     await post(`/api/modules/${SLUG}/quality-scores`, form);
     setForm({ ...form, score: 0, total_records: 0, passing_records: 0, notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Data-Quality Scorecard</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Master Type</label>
@@ -572,6 +596,7 @@ function QualitySection() {
 function DuplicatesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_a_id: "", record_a_name: "", record_b_id: "", record_b_name: "", match_score: 80, status: "open" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/duplicates`)); setLoading(false); }
@@ -582,12 +607,14 @@ function DuplicatesSection() {
     if (!form.record_a_id.trim() || !form.record_b_id.trim()) return;
     await post(`/api/modules/${SLUG}/duplicates`, form);
     setForm({ ...form, record_a_id: "", record_a_name: "", record_b_id: "", record_b_name: "", match_score: 80 });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Duplicate Detection Engine</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Master Type</label>
@@ -638,6 +665,7 @@ function DuplicatesSection() {
 function ReferenceSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ code_system: "", code_value: "", code_description: "", module_a: "", module_b: "", is_consistent: true, notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reference-data`)); setLoading(false); }
@@ -648,12 +676,14 @@ function ReferenceSection() {
     if (!form.code_system.trim() || !form.code_value.trim()) return;
     await post(`/api/modules/${SLUG}/reference-data`, form);
     setForm({ ...form, code_value: "", code_description: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Reference-Data Consistency</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Code System</label><input className="input" value={form.code_system} onChange={(e) => setForm({ ...form, code_system: e.target.value })} required /></div>
@@ -736,6 +766,7 @@ function AgeingSection() {
 function ReconciliationSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_id: "", source_system: "", target_system: "", source_hash: "", target_hash: "", status: "pending", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/reconciliation`)); setLoading(false); }
@@ -746,12 +777,14 @@ function ReconciliationSection() {
     if (!form.record_id.trim()) return;
     await post(`/api/modules/${SLUG}/reconciliation`, form);
     setForm({ ...form, record_id: "", source_hash: "", target_hash: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Master Reconciliation</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Master Type</label>
@@ -799,6 +832,7 @@ function ReconciliationSection() {
 function AlertingSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ master_type: "chart_of_accounts", field_name: "*", threshold: 1, recipients: "", message: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/alerts`)); setLoading(false); }
@@ -808,12 +842,14 @@ function AlertingSection() {
     e.preventDefault();
     await post(`/api/modules/${SLUG}/alerts`, form);
     setForm({ ...form, field_name: "*", recipients: "", message: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Sensitive-Change Alerting</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Master Type</label>
@@ -859,6 +895,7 @@ function AlertingSection() {
 function ScopeSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ entity_type: "GL", entity_name: "", description: "", risk_rating: "Medium" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/scope`)); setLoading(false); }
@@ -869,12 +906,14 @@ function ScopeSection() {
     if (!form.entity_name.trim()) return;
     await post(`/api/modules/${SLUG}/scope`, form);
     setForm({ ...form, entity_name: "", description: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Scope & Audit Universe</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 1, minWidth: 120 }}><label>Entity Type</label>
@@ -920,6 +959,7 @@ function ScopeSection() {
 function RcmSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ risk_id: "", risk_description: "", control_id: "", control_description: "", assertion: "", control_type: "Preventive", control_owner: "", frequency: "Quarterly" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rcm`)); setLoading(false); }
@@ -930,12 +970,14 @@ function RcmSection() {
     if (!form.risk_id.trim() || !form.control_id.trim()) return;
     await post(`/api/modules/${SLUG}/rcm`, form);
     setForm({ ...form, risk_id: "", risk_description: "", control_id: "", control_description: "", assertion: "", control_owner: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Risk & Control Matrix (RCM)</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Risk ID</label><input className="input" value={form.risk_id} onChange={(e) => setForm({ ...form, risk_id: e.target.value })} required /></div>
@@ -986,6 +1028,7 @@ function RcmSection() {
 function RulesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ rule_name: "", rule_type: "Red-Flag", master_type: "chart_of_accounts", threshold: "", caat_script: "", is_active: true });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/rules`)); setLoading(false); }
@@ -996,12 +1039,14 @@ function RulesSection() {
     if (!form.rule_name.trim()) return;
     await post(`/api/modules/${SLUG}/rules`, form);
     setForm({ ...form, rule_name: "", threshold: "", caat_script: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Test & Analytics Rule Library</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Rule Name</label><input className="input" value={form.rule_name} onChange={(e) => setForm({ ...form, rule_name: e.target.value })} required /></div>
@@ -1049,6 +1094,7 @@ function RulesSection() {
 function DataSourcesSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ source_name: "", source_type: "ERP", connection_detail: "", table_mapping: "", is_active: true });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/data-sources`)); setLoading(false); }
@@ -1059,12 +1105,14 @@ function DataSourcesSection() {
     if (!form.source_name.trim()) return;
     await post(`/api/modules/${SLUG}/data-sources`, form);
     setForm({ ...form, source_name: "", connection_detail: "", table_mapping: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Data Source & Connector Setup</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 2, minWidth: 180 }}><label>Source Name</label><input className="input" value={form.source_name} onChange={(e) => setForm({ ...form, source_name: e.target.value })} required /></div>
@@ -1108,6 +1156,7 @@ function DataSourcesSection() {
 function SamplingSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ population_name: "", population_size: 0, sample_size: 0, sample_method: "Random", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/sampling`)); setLoading(false); }
@@ -1118,12 +1167,14 @@ function SamplingSection() {
     if (!form.population_name.trim()) return;
     await post(`/api/modules/${SLUG}/sampling`, form);
     setForm({ ...form, population_name: "", population_size: 0, sample_size: 0, notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Sampling & Population Builder</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field" style={{ flex: 2, minWidth: 180 }}><label>Population Name</label><input className="input" value={form.population_name} onChange={(e) => setForm({ ...form, population_name: e.target.value })} required /></div>
@@ -1166,6 +1217,7 @@ function SamplingSection() {
 function ExceptionsSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ exception_type: "", description: "", severity: "Medium", status: "Open", assigned_to: "", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/exceptions`)); setLoading(false); }
@@ -1176,12 +1228,19 @@ function ExceptionsSection() {
     if (!form.exception_type.trim()) return;
     await post(`/api/modules/${SLUG}/exceptions`, form);
     setForm({ ...form, exception_type: "", description: "", assigned_to: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    refresh();
+  }
+
+  async function updateStatus(id: number, status: string) {
+    await patch(`/api/modules/${SLUG}/exceptions/${id}`, { status });
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Exception & Red-Flag Queue</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Exception Type</label><input className="input" value={form.exception_type} onChange={(e) => setForm({ ...form, exception_type: e.target.value })} required /></div>
@@ -1206,7 +1265,11 @@ function ExceptionsSection() {
                   <td><strong>{ex.exception_type}</strong></td>
                   <td style={{ color: "var(--slate)" }}>{ex.description || "—"}</td>
                   <td><span className={`badge ${badge(ex.severity)}`}>{ex.severity}</span></td>
-                  <td><span className={`badge ${badge(ex.status)}`}>{ex.status}</span></td>
+                  <td>
+                    <select className="select" value={ex.status} onChange={(e) => updateStatus(ex.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </td>
                   <td>{ex.assigned_to || "—"}</td>
                   <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/exceptions/${ex.id}`); refresh(); }}>Delete</button></td>
                 </tr>
@@ -1225,6 +1288,7 @@ function ExceptionsSection() {
 function WorkingPapersSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", paper_type: "Evidence", reference_url: "", status: "Draft" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/working-papers`)); setLoading(false); }
@@ -1235,12 +1299,14 @@ function WorkingPapersSection() {
     if (!form.title.trim()) return;
     await post(`/api/modules/${SLUG}/working-papers`, form);
     setForm({ ...form, title: "", description: "", reference_url: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Working Papers & Evidence</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Title</label><input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
@@ -1282,6 +1348,7 @@ function WorkingPapersSection() {
 function FindingsSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ finding_title: "", description: "", severity: "Medium", status: "Open", assigned_to: "", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/findings`)); setLoading(false); }
@@ -1292,12 +1359,19 @@ function FindingsSection() {
     if (!form.finding_title.trim()) return;
     await post(`/api/modules/${SLUG}/findings`, form);
     setForm({ ...form, finding_title: "", description: "", assigned_to: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    refresh();
+  }
+
+  async function updateStatus(id: number, status: string) {
+    await patch(`/api/modules/${SLUG}/findings/${id}`, { status });
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Observation & Finding Log</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Finding Title</label><input className="input" value={form.finding_title} onChange={(e) => setForm({ ...form, finding_title: e.target.value })} required /></div>
@@ -1321,7 +1395,11 @@ function FindingsSection() {
                 <tr key={f.id}>
                   <td><strong>{f.finding_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{f.description}</div></td>
                   <td><span className={`badge ${badge(f.severity)}`}>{f.severity}</span></td>
-                  <td><span className={`badge ${badge(f.status)}`}>{f.status}</span></td>
+                  <td>
+                    <select className="select" value={f.status} onChange={(e) => updateStatus(f.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </td>
                   <td>{f.assigned_to || "—"}</td>
                   <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/findings/${f.id}`); refresh(); }}>Delete</button></td>
                 </tr>
@@ -1340,6 +1418,7 @@ function FindingsSection() {
 function RemediationSection() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ action_title: "", description: "", owner: "", status: "Planned", notes: "" });
 
   async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/remediation`)); setLoading(false); }
@@ -1350,12 +1429,19 @@ function RemediationSection() {
     if (!form.action_title.trim()) return;
     await post(`/api/modules/${SLUG}/remediation`, form);
     setForm({ ...form, action_title: "", description: "", owner: "", notes: "" });
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    refresh();
+  }
+
+  async function updateStatus(id: number, status: string) {
+    await patch(`/api/modules/${SLUG}/remediation/${id}`, { status });
     refresh();
   }
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <h3 style={{ color: "var(--navy)", margin: 0 }}>Remediation / Action Tracker</h3>
+      <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="field"><label>Action Title</label><input className="input" value={form.action_title} onChange={(e) => setForm({ ...form, action_title: e.target.value })} required /></div>
@@ -1379,7 +1465,11 @@ function RemediationSection() {
                 <tr key={r.id}>
                   <td><strong>{r.action_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.description}</div></td>
                   <td>{r.owner || "—"}</td>
-                  <td><span className={`badge ${badge(r.status)}`}>{r.status}</span></td>
+                  <td>
+                    <select className="select" value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      {["Planned", "In Progress", "Completed"].map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </td>
                   <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await del(`/api/modules/${SLUG}/remediation/${r.id}`); refresh(); }}>Delete</button></td>
                 </tr>
               ))}
