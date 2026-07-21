@@ -1,7 +1,5 @@
-import React from "react";
-import { Building } from "lucide-react";
-import InvestmentsPage from "./InvestmentsPage";
 import type { ModuleConfig } from "../registry";
+import InvestmentsPage from "./InvestmentsPage";
 
 const config: ModuleConfig = {
   slug: "investments",
