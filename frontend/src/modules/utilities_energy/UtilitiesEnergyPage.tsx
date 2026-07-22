@@ -63,6 +63,7 @@ interface CheckRun {
 interface GenericException {
   id: number;
   module_key: string;
+  run_id: number;
   check_key: string;
   description: string;
   status: "open" | "under_review" | "cleared" | "confirmed";
@@ -217,6 +218,9 @@ export default function UtilitiesEnergyPage() {
   const [form, setForm] = useState<UtilityRecordForm>(EMPTY_FORM);
   const [runningKey, setRunningKey] = useState<string | null>(null);
   const [lastRunMessage, setLastRunMessage] = useState<string | null>(null);
+  // Which Run History row is selected, so the Exception Queue below can be
+  // filtered down to just that run's flagged records.
+  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
 
   async function refreshAll() {
     const [summaryRes, recordsRes, checksRes, runsRes, exceptionsRes] = await Promise.all([
@@ -269,6 +273,8 @@ export default function UtilitiesEnergyPage() {
         `Scanned ${result.records_scanned} record${result.records_scanned === 1 ? "" : "s"}, ` +
           `found ${result.exceptions_found} exception${result.exceptions_found === 1 ? "" : "s"}.`
       );
+      // Jump straight to this run's exceptions once the run finishes.
+      setSelectedRunId(result.id);
       await refreshAll();
     } finally {
       setRunningKey(null);
@@ -281,6 +287,11 @@ export default function UtilitiesEnergyPage() {
   }
 
   if (loading) return <p>Loading…</p>;
+
+  const selectedRun = selectedRunId ? runs.find((r) => r.id === selectedRunId) ?? null : null;
+  const visibleExceptions = selectedRunId
+    ? exceptions.filter((ex) => ex.run_id === selectedRunId)
+    : exceptions;
 
   return (
     <div>
@@ -426,6 +437,9 @@ export default function UtilitiesEnergyPage() {
       {/* --- Run history --- */}
       <div className="card" style={{ padding: 20, marginBottom: 24 }}>
         <strong>Run History</strong>
+        <p style={{ color: "var(--slate)", fontSize: 13, marginTop: 4, marginBottom: 0 }}>
+          Click a run to filter the Exception Queue below to just its flagged records.
+        </p>
         {runs.length === 0 ? (
           <p style={{ color: "var(--slate)", marginTop: 12 }}>No checks run yet.</p>
         ) : (
@@ -440,7 +454,15 @@ export default function UtilitiesEnergyPage() {
             </thead>
             <tbody>
               {runs.map((r) => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  onClick={() => setSelectedRunId((cur) => (cur === r.id ? null : r.id))}
+                  style={{
+                    cursor: "pointer",
+                    background: selectedRunId === r.id ? "var(--accent-bg, rgba(37,99,235,0.08))" : undefined,
+                  }}
+                  title="Click to filter the Exception Queue to this run"
+                >
                   <td>{checks.find((c) => c.key === r.check_key)?.label ?? r.check_key}</td>
                   <td>{new Date(r.run_at).toLocaleString()}</td>
                   <td>{r.records_scanned}</td>
@@ -454,12 +476,31 @@ export default function UtilitiesEnergyPage() {
 
       {/* --- Exception queue --- */}
       <div className="card" style={{ padding: 20 }}>
-        <strong>
-          <Icon name="alert-triangle" size={16} style={{ marginRight: 6, verticalAlign: "-3px" }} />
-          Exception Queue
-        </strong>
-        {exceptions.length === 0 ? (
-          <p style={{ color: "var(--slate)", marginTop: 12 }}>No exceptions raised.</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <strong>
+            <Icon name="alert-triangle" size={16} style={{ marginRight: 6, verticalAlign: "-3px" }} />
+            Exception Queue
+          </strong>
+          {selectedRun && (
+            <span style={{ color: "var(--slate)", fontSize: 13 }}>
+              Showing {visibleExceptions.length} exception{visibleExceptions.length === 1 ? "" : "s"} from the{" "}
+              <strong>{checks.find((c) => c.key === selectedRun.check_key)?.label ?? selectedRun.check_key}</strong>{" "}
+              run on {new Date(selectedRun.run_at).toLocaleString()} —{" "}
+              <button
+                className="btn btn-ghost"
+                style={{ padding: "2px 8px", fontSize: 13 }}
+                onClick={() => setSelectedRunId(null)}
+              >
+                clear filter
+              </button>
+            </span>
+          )}
+        </div>
+
+        {visibleExceptions.length === 0 ? (
+          <p style={{ color: "var(--slate)", marginTop: 12 }}>
+            {selectedRun ? "No exceptions from this run." : "No exceptions raised."}
+          </p>
         ) : (
           <table style={{ marginTop: 16 }}>
             <thead>
@@ -472,7 +513,7 @@ export default function UtilitiesEnergyPage() {
               </tr>
             </thead>
             <tbody>
-              {exceptions.map((ex) => (
+              {visibleExceptions.map((ex) => (
                 <tr key={ex.id}>
                   <td>{checks.find((c) => c.key === ex.check_key)?.label ?? ex.check_key}</td>
                   <td style={{ color: "var(--slate)" }}>{ex.description}</td>

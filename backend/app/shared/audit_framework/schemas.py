@@ -196,6 +196,7 @@ class GenericExceptionOut(BaseModel):
 
     id: int
     module_key: str
+    run_id: int | None = None
     check_key: str
     description: str
     status: str

@@ -433,6 +433,7 @@ def _get_exceptions(tenant_id: int, db: Session) -> list[GenericExceptionOut]:
         GenericExceptionOut(
             id=e.id,
             module_key="utilities_energy",
+            run_id=e.run_id,
             check_key=e.check_key,
             description=e.description,
             status=e.status.value,
@@ -503,6 +504,7 @@ def _get_exceptions(tenant_id: int, db: Session) -> list[GenericExceptionOut]:
         GenericExceptionOut(
             id=e.id,
             module_key="utilities_energy",
+            run_id=e.run_id,
             check_key=e.check_key,
             description=e.description,
             status=e.status.value,
@@ -573,6 +575,7 @@ def _get_exceptions(tenant_id: int, db: Session) -> list[GenericExceptionOut]:
         GenericExceptionOut(
             id=e.id,
             module_key="utilities_energy",
+            run_id=e.run_id,
             check_key=e.check_key,
             description=e.description,
             status=e.status.value,
