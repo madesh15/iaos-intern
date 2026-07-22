@@ -1,10 +1,174 @@
 from datetime import date, datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.core.tenancy import TenantMixin
+
+
+class Plant(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_plants"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    location: Mapped[str] = mapped_column(String(255), default="")
+    address: Mapped[str] = mapped_column(Text, default="")
+    city: Mapped[str] = mapped_column(String(100), default="")
+    state: Mapped[str] = mapped_column(String(100), default="")
+    pincode: Mapped[str] = mapped_column(String(20), default="")
+    contact_person: Mapped[str] = mapped_column(String(255), default="")
+    contact_phone: Mapped[str] = mapped_column(String(50), default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Warehouse(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_warehouses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    location: Mapped[str] = mapped_column(String(255), default="")
+    address: Mapped[str] = mapped_column(Text, default="")
+    city: Mapped[str] = mapped_column(String(100), default="")
+    state: Mapped[str] = mapped_column(String(100), default="")
+    pincode: Mapped[str] = mapped_column(String(20), default="")
+    capacity_sqft: Mapped[float] = mapped_column(Float, default=0)
+    capacity_pallets: Mapped[int] = mapped_column(Integer, default=0)
+    contact_person: Mapped[str] = mapped_column(String(255), default="")
+    contact_phone: Mapped[str] = mapped_column(String(50), default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Region(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_regions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    zone: Mapped[str] = mapped_column(String(100), default="")
+    countries: Mapped[str] = mapped_column(Text, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class BusinessUnit(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_business_units"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    head: Mapped[str] = mapped_column(String(255), default="")
+    cost_center: Mapped[str] = mapped_column(String(100), default="")
+    budget_allocated: Mapped[float] = mapped_column(Float, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class RiskControl(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_risk_controls"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    risk_code: Mapped[str] = mapped_column(String(50), unique=True)
+    risk_description: Mapped[str] = mapped_column(Text)
+    control_description: Mapped[str] = mapped_column(Text, default="")
+    assertion: Mapped[str] = mapped_column(String(100), default="")
+    risk_category: Mapped[str] = mapped_column(String(100), default="")
+    likelihood: Mapped[str] = mapped_column(String(50), default="Medium")
+    impact: Mapped[str] = mapped_column(String(50), default="Medium")
+    inherent_risk: Mapped[str] = mapped_column(String(50), default="Medium")
+    control_frequency: Mapped[str] = mapped_column(String(50), default="Monthly")
+    control_owner: Mapped[str] = mapped_column(String(255), default="")
+    residual_risk: Mapped[str] = mapped_column(String(50), default="Medium")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class TestRule(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_test_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rule_code: Mapped[str] = mapped_column(String(50), unique=True)
+    rule_name: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(100), default="")
+    expression: Mapped[str] = mapped_column(Text, default="")
+    threshold_value: Mapped[float] = mapped_column(Float, default=0)
+    threshold_operator: Mapped[str] = mapped_column(String(20), default=">")
+    severity: Mapped[str] = mapped_column(String(50), default="Medium")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class DataSource(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_data_sources"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_code: Mapped[str] = mapped_column(String(50), unique=True)
+    source_name: Mapped[str] = mapped_column(String(255))
+    source_type: Mapped[str] = mapped_column(String(50), default="API")
+    connection_string: Mapped[str] = mapped_column(Text, default="")
+    table_name: Mapped[str] = mapped_column(String(255), default="")
+    file_format: Mapped[str] = mapped_column(String(50), default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_sync_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class SamplingRecord(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_sampling_records"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sample_code: Mapped[str] = mapped_column(String(50), unique=True)
+    population_table: Mapped[str] = mapped_column(String(255))
+    population_count: Mapped[int] = mapped_column(Integer, default=0)
+    sample_size: Mapped[int] = mapped_column(Integer, default=0)
+    sampling_method: Mapped[str] = mapped_column(String(50), default="Random")
+    confidence_level: Mapped[float] = mapped_column(Float, default=95)
+    margin_of_error: Mapped[float] = mapped_column(Float, default=5)
+    sample_data: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(50), default="Draft")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ExceptionItem(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_exceptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    exception_code: Mapped[str] = mapped_column(String(50), unique=True)
+    title: Mapped[str] = mapped_column(String(500))
+    category: Mapped[str] = mapped_column(String(100), default="")
+    severity: Mapped[str] = mapped_column(String(50), default="Medium")
+    description: Mapped[str] = mapped_column(Text, default="")
+    source_reference: Mapped[str] = mapped_column(String(255), default="")
+    financial_impact: Mapped[float] = mapped_column(Float, default=0)
+    assigned_to: Mapped[str] = mapped_column(String(255), default="")
+    comments: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(50), default="Open")
+    resolved_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class WorkingPaper(Base, TenantMixin):
+    __tablename__ = "mod_logistics_freight_working_papers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    wp_code: Mapped[str] = mapped_column(String(50), unique=True)
+    title: Mapped[str] = mapped_column(String(500))
+    category: Mapped[str] = mapped_column(String(100), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    file_type: Mapped[str] = mapped_column(String(50), default="PDF")
+    file_url: Mapped[str] = mapped_column(String(500), default="")
+    file_size: Mapped[int] = mapped_column(Integer, default=0)
+    reviewed_by: Mapped[str] = mapped_column(String(255), default="")
+    reviewed_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    reviewer_signoff: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(50), default="Draft")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Carrier(Base, TenantMixin):

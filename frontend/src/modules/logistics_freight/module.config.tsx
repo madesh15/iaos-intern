@@ -1,13 +1,13 @@
 import type { ModuleConfig } from "../registry";
-import LogisticsFreightPage from "./LogisticsFreightPage";
+import Module from "./Module";
 
 const config: ModuleConfig = {
   slug: "logistics_freight",
   title: "Logistics & Freight",
-  description: "Logistics & Freight — audit module.",
+  description: "Controls freight and transport costs through freight rate validation, routing analytics, carrier performance, detention analysis, duplicate billing detection, POD reconciliation, SLA monitoring, and freight cost analytics.",
   icon: "truck",
-  group: "Supply Chain & Operations",
-  component: LogisticsFreightPage,
+  group: "Operations",
+  component: Module,
 };
 
 export default config;

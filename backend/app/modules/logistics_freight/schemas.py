@@ -740,3 +740,398 @@ class DashboardSummary(BaseModel):
     active_carriers: int
     pending_invoices: int
     total_findings: int
+
+
+# === Scope & Audit Universe ===
+
+class PlantCreate(BaseModel):
+    code: str
+    name: str
+    location: str = ""
+    address: str = ""
+    city: str = ""
+    state: str = ""
+    pincode: str = ""
+    contact_person: str = ""
+    contact_phone: str = ""
+    is_active: bool = True
+
+class PlantUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    location: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class PlantOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    location: str
+    address: str
+    city: str
+    state: str
+    pincode: str
+    contact_person: str
+    contact_phone: str
+    is_active: bool
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+class WarehouseCreate(BaseModel):
+    code: str
+    name: str
+    location: str = ""
+    address: str = ""
+    city: str = ""
+    state: str = ""
+    pincode: str = ""
+    capacity_sqft: float = 0
+    capacity_pallets: int = 0
+    contact_person: str = ""
+    contact_phone: str = ""
+    is_active: bool = True
+
+class WarehouseUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    location: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
+    capacity_sqft: Optional[float] = None
+    capacity_pallets: Optional[int] = None
+    contact_person: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class WarehouseOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    location: str
+    address: str
+    city: str
+    state: str
+    pincode: str
+    capacity_sqft: float
+    capacity_pallets: int
+    contact_person: str
+    contact_phone: str
+    is_active: bool
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+class RegionCreate(BaseModel):
+    code: str
+    name: str
+    zone: str = ""
+    countries: str = ""
+    is_active: bool = True
+
+class RegionUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    zone: Optional[str] = None
+    countries: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class RegionOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    zone: str
+    countries: str
+    is_active: bool
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+class BusinessUnitCreate(BaseModel):
+    code: str
+    name: str
+    head: str = ""
+    cost_center: str = ""
+    budget_allocated: float = 0
+    is_active: bool = True
+
+class BusinessUnitUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    head: Optional[str] = None
+    cost_center: Optional[str] = None
+    budget_allocated: Optional[float] = None
+    is_active: Optional[bool] = None
+
+class BusinessUnitOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    head: str
+    cost_center: str
+    budget_allocated: float
+    is_active: bool
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Risk & Control Matrix ===
+
+class RiskControlCreate(BaseModel):
+    risk_code: str
+    risk_description: str
+    control_description: str = ""
+    assertion: str = ""
+    risk_category: str = ""
+    likelihood: str = "Medium"
+    impact: str = "Medium"
+    inherent_risk: str = "Medium"
+    control_frequency: str = "Monthly"
+    control_owner: str = ""
+    residual_risk: str = "Medium"
+
+class RiskControlUpdate(BaseModel):
+    risk_code: Optional[str] = None
+    risk_description: Optional[str] = None
+    control_description: Optional[str] = None
+    assertion: Optional[str] = None
+    risk_category: Optional[str] = None
+    likelihood: Optional[str] = None
+    impact: Optional[str] = None
+    inherent_risk: Optional[str] = None
+    control_frequency: Optional[str] = None
+    control_owner: Optional[str] = None
+    residual_risk: Optional[str] = None
+
+class RiskControlOut(BaseModel):
+    id: int
+    risk_code: str
+    risk_description: str
+    control_description: str
+    assertion: str
+    risk_category: str
+    likelihood: str
+    impact: str
+    inherent_risk: str
+    control_frequency: str
+    control_owner: str
+    residual_risk: str
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Test & Analytics Rule Library ===
+
+class TestRuleCreate(BaseModel):
+    rule_code: str
+    rule_name: str
+    description: str = ""
+    category: str = ""
+    expression: str = ""
+    threshold_value: float = 0
+    threshold_operator: str = ">"
+    severity: str = "Medium"
+    is_active: bool = True
+
+class TestRuleUpdate(BaseModel):
+    rule_code: Optional[str] = None
+    rule_name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    expression: Optional[str] = None
+    threshold_value: Optional[float] = None
+    threshold_operator: Optional[str] = None
+    severity: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class TestRuleOut(BaseModel):
+    id: int
+    rule_code: str
+    rule_name: str
+    description: str
+    category: str
+    expression: str
+    threshold_value: float
+    threshold_operator: str
+    severity: str
+    is_active: bool
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Data Source & Connector Setup ===
+
+class DataSourceCreate(BaseModel):
+    source_code: str
+    source_name: str
+    source_type: str = "API"
+    connection_string: str = ""
+    table_name: str = ""
+    file_format: str = ""
+    is_active: bool = True
+
+class DataSourceUpdate(BaseModel):
+    source_code: Optional[str] = None
+    source_name: Optional[str] = None
+    source_type: Optional[str] = None
+    connection_string: Optional[str] = None
+    table_name: Optional[str] = None
+    file_format: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class DataSourceOut(BaseModel):
+    id: int
+    source_code: str
+    source_name: str
+    source_type: str
+    connection_string: str
+    table_name: str
+    file_format: str
+    is_active: bool
+    last_sync_date: Optional[date] = None
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Sampling & Population Builder ===
+
+class SamplingRecordCreate(BaseModel):
+    sample_code: str
+    population_table: str
+    population_count: int = 0
+    sample_size: int = 0
+    sampling_method: str = "Random"
+    confidence_level: float = 95
+    margin_of_error: float = 5
+    sample_data: str = "[]"
+    status: str = "Draft"
+    created_by: str = ""
+
+class SamplingRecordUpdate(BaseModel):
+    population_table: Optional[str] = None
+    population_count: Optional[int] = None
+    sample_size: Optional[int] = None
+    sampling_method: Optional[str] = None
+    confidence_level: Optional[float] = None
+    margin_of_error: Optional[float] = None
+    sample_data: Optional[str] = None
+    status: Optional[str] = None
+    created_by: Optional[str] = None
+
+class SamplingRecordOut(BaseModel):
+    id: int
+    sample_code: str
+    population_table: str
+    population_count: int
+    sample_size: int
+    sampling_method: str
+    confidence_level: float
+    margin_of_error: float
+    sample_data: str
+    status: str
+    created_by: str
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Exception Queue ===
+
+class ExceptionItemCreate(BaseModel):
+    exception_code: str
+    title: str
+    category: str = ""
+    severity: str = "Medium"
+    description: str = ""
+    source_reference: str = ""
+    financial_impact: float = 0
+    assigned_to: str = ""
+    comments: str = ""
+    status: str = "Open"
+
+class ExceptionItemUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    severity: Optional[str] = None
+    description: Optional[str] = None
+    source_reference: Optional[str] = None
+    financial_impact: Optional[float] = None
+    assigned_to: Optional[str] = None
+    comments: Optional[str] = None
+    status: Optional[str] = None
+
+class ExceptionItemOut(BaseModel):
+    id: int
+    exception_code: str
+    title: str
+    category: str
+    severity: str
+    description: str
+    source_reference: str
+    financial_impact: float
+    assigned_to: str
+    comments: str
+    status: str
+    resolved_date: Optional[date] = None
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
+
+# === Working Papers ===
+
+class WorkingPaperCreate(BaseModel):
+    wp_code: str
+    title: str
+    category: str = ""
+    description: str = ""
+    file_type: str = "PDF"
+    file_url: str = ""
+    file_size: int = 0
+    reviewed_by: str = ""
+    status: str = "Draft"
+
+class WorkingPaperUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    file_type: Optional[str] = None
+    file_url: Optional[str] = None
+    file_size: Optional[int] = None
+    reviewed_by: Optional[str] = None
+    reviewed_date: Optional[date] = None
+    reviewer_signoff: Optional[bool] = None
+    status: Optional[str] = None
+
+class WorkingPaperOut(BaseModel):
+    id: int
+    wp_code: str
+    title: str
+    category: str
+    description: str
+    file_type: str
+    file_url: str
+    file_size: int
+    reviewed_by: str
+    reviewed_date: Optional[date] = None
+    reviewer_signoff: bool
+    status: str
+    tenant_id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = {"from_attributes": True}
