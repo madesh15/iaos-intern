@@ -120,7 +120,7 @@ class Evidence(Base, TenantMixin):
     notes: Mapped[str] = mapped_column(Text, default="")
 
 
-class Finding(Base, TenantMixin):
+class PayrollFinding(Base, TenantMixin):
     """Graded observation raised for the domain, routed for remediation."""
 
     __tablename__ = "mod_payroll_hr_findings"

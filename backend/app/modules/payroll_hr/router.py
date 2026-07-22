@@ -322,13 +322,13 @@ def delete_evidence(row_id: int, current_user: CurrentUser, db: DbSession):
 # ── Observation & Finding Log ──────────────────────────────────────────
 @router.get("/findings", response_model=list[s.FindingOut])
 def list_findings(current_user: CurrentUser, db: DbSession):
-    q = tenant_scoped(db.query(m.Finding), current_user).order_by(m.Finding.id.desc())
+    q = tenant_scoped(db.query(m.PayrollFinding), current_user).order_by(m.PayrollFinding.id.desc())
     return [s.FindingOut.model_validate(x) for x in q.all()]
 
 
 @router.post("/findings", response_model=s.FindingOut, status_code=201)
 def create_finding(body: s.FindingCreate, current_user: CurrentUser, db: DbSession):
-    row = m.Finding(**body.model_dump(), tenant_id=current_user.tenant_id)
+    row = m.PayrollFinding(**body.model_dump(), tenant_id=current_user.tenant_id)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -337,7 +337,7 @@ def create_finding(body: s.FindingCreate, current_user: CurrentUser, db: DbSessi
 
 @router.patch("/findings/{row_id}", response_model=s.FindingOut)
 def update_finding(row_id: int, body: s.FindingUpdate, current_user: CurrentUser, db: DbSession):
-    row = tenant_scoped(db.query(m.Finding).filter(m.Finding.id == row_id), current_user).first()
+    row = tenant_scoped(db.query(m.PayrollFinding).filter(m.PayrollFinding.id == row_id), current_user).first()
     if not row:
         raise HTTPException(404, "Finding not found")
     for k, v in body.model_dump(exclude_unset=True).items():
@@ -349,7 +349,7 @@ def update_finding(row_id: int, body: s.FindingUpdate, current_user: CurrentUser
 
 @router.delete("/findings/{row_id}", status_code=204)
 def delete_finding(row_id: int, current_user: CurrentUser, db: DbSession):
-    row = tenant_scoped(db.query(m.Finding).filter(m.Finding.id == row_id), current_user).first()
+    row = tenant_scoped(db.query(m.PayrollFinding).filter(m.PayrollFinding.id == row_id), current_user).first()
     if not row:
         raise HTTPException(404, "Finding not found")
     db.delete(row)
@@ -367,7 +367,7 @@ def list_actions(current_user: CurrentUser, db: DbSession):
 def create_action(body: s.ActionCreate, current_user: CurrentUser, db: DbSession):
     finding_title = ""
     if body.finding_id:
-        f = tenant_scoped(db.query(m.Finding).filter(m.Finding.id == body.finding_id), current_user).first()
+        f = tenant_scoped(db.query(m.PayrollFinding).filter(m.PayrollFinding.id == body.finding_id), current_user).first()
         finding_title = f.title if f else ""
     row = m.ActionItem(**body.model_dump(), finding_title=finding_title, tenant_id=current_user.tenant_id)
     db.add(row)
@@ -405,7 +405,7 @@ def dashboard(current_user: CurrentUser, db: DbSession):
     scope = tenant_scoped(db.query(m.ScopeUnit), current_user).all()
     rules = tenant_scoped(db.query(m.Rule), current_user).all()
     exceptions = tenant_scoped(db.query(m.Exception_), current_user).all()
-    findings = tenant_scoped(db.query(m.Finding), current_user).all()
+    findings = tenant_scoped(db.query(m.PayrollFinding), current_user).all()
     actions = tenant_scoped(db.query(m.ActionItem), current_user).all()
 
     in_scope = [u for u in scope if u.in_scope]

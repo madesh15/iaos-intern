@@ -43,7 +43,7 @@ export default function BulkImportTab() {
   const [dragOver, setDragOver] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const loadBatches = () => get(`${BASE}/import/batches`).then(setBatches);
+  const loadBatches = () => get<Batch[]>(`${BASE}/import/batches`).then(setBatches);
 
   useEffect(() => {
     loadBatches();
@@ -51,7 +51,7 @@ export default function BulkImportTab() {
 
   useEffect(() => {
     if (selectedBatch) {
-      get(`${BASE}/import/batches/${selectedBatch}/transactions`).then(setRows);
+      get<Txn[]>(`${BASE}/import/batches/${selectedBatch}/transactions`).then(setRows);
     }
   }, [selectedBatch]);
 
@@ -87,7 +87,7 @@ export default function BulkImportTab() {
   };
 
   const downloadTemplate = async () => {
-    const data = await get(`${BASE}/import/template`);
+    const data: { content: string; filename: string } = await get(`${BASE}/import/template`);
     const blob = new Blob([data.content], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

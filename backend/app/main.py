@@ -1,7 +1,9 @@
 """IAOS — Internal Audit OS API entrypoint (Cap Corporate)."""
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.models  # noqa: F401  — registers platform tables on Base.metadata

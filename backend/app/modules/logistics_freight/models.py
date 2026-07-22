@@ -287,4 +287,4 @@ class ActionTracker(Base, TenantMixin):
     notes: Mapped[str] = mapped_column(Text, default="")
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    finding = relationship("Finding", back_populates="actions", lazy="selectin")
+    finding = relationship(Finding, back_populates="actions", lazy="selectin")
