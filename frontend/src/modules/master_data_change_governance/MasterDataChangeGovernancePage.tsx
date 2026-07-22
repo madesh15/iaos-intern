@@ -4,37 +4,34 @@ import { del, get, patch, post } from "../../lib/api";
 const SLUG = "master_data_change_governance";
 const MT = ["chart_of_accounts", "cost_centre", "bank_master", "gl_account", "profit_centre"];
 
-type Tab = "dashboard" | "change_log" | "coa" | "cost_centre" | "bank" | "maker_checker"
+type Tab = "dashboard" | "change_log" | "maker_checker"
   | "after_hours" | "orphan" | "bulk_upload" | "field_access" | "quality" | "duplicates"
   | "reference" | "ageing" | "reconciliation" | "alerting" | "scope" | "rcm" | "rules"
   | "data_sources" | "sampling" | "exceptions" | "working_papers" | "findings" | "remediation";
 
-const TABS: { key: Tab; label: string; group: string }[] = [
-  { key: "dashboard", label: "Dashboard & KPIs", group: "Overview" },
-  { key: "change_log", label: "Critical-Field Change Log", group: "Change Tracking" },
-  { key: "coa", label: "Chart-of-Accounts", group: "Change Tracking" },
-  { key: "cost_centre", label: "Cost-Centre / Profit-Centre", group: "Change Tracking" },
-  { key: "bank", label: "Bank-Master", group: "Change Tracking" },
-  { key: "maker_checker", label: "Maker-Checker Enforcement", group: "Governance Controls" },
-  { key: "after_hours", label: "After-Hours Changes", group: "Governance Controls" },
-  { key: "orphan", label: "Orphan / Unmapped Records", group: "Governance Controls" },
-  { key: "bulk_upload", label: "Bulk-Upload Controls", group: "Governance Controls" },
-  { key: "field_access", label: "Field-Level Access", group: "Governance Controls" },
-  { key: "quality", label: "Data-Quality Scorecard", group: "Analytics & Quality" },
-  { key: "duplicates", label: "Duplicate Detection", group: "Analytics & Quality" },
-  { key: "reference", label: "Reference-Data Consistency", group: "Analytics & Quality" },
-  { key: "ageing", label: "Approval Ageing", group: "Analytics & Quality" },
-  { key: "reconciliation", label: "Master Reconciliation", group: "Analytics & Quality" },
-  { key: "alerting", label: "Sensitive-Change Alerting", group: "Analytics & Quality" },
-  { key: "scope", label: "Scope & Audit Universe", group: "Audit Framework" },
-  { key: "rcm", label: "Risk & Control Matrix", group: "Audit Framework" },
-  { key: "rules", label: "Test Rule Library", group: "Audit Framework" },
-  { key: "data_sources", label: "Data Source Setup", group: "Audit Framework" },
-  { key: "sampling", label: "Sampling & Population", group: "Audit Framework" },
-  { key: "exceptions", label: "Exception & Red-Flag Queue", group: "Audit Framework" },
-  { key: "working_papers", label: "Working Papers", group: "Audit Framework" },
-  { key: "findings", label: "Observation & Finding Log", group: "Audit Framework" },
-  { key: "remediation", label: "Remediation Tracker", group: "Audit Framework" },
+const TABS: { key: Tab; label: string; group: string; tip?: string }[] = [
+  { key: "dashboard", label: "Dashboard & KPIs", group: "Overview", tip: "At-a-glance KPIs, risk heatmap, recent changes and trend charts" },
+  { key: "change_log", label: "Change Log", group: "Change Tracking", tip: "Track every critical-field change across master types with approval workflow" },
+  { key: "maker_checker", label: "Maker-Checker", group: "Governance Controls", tip: "Enforce dual-approval rules per master type and field" },
+  { key: "after_hours", label: "After-Hours Changes", group: "Governance Controls", tip: "Flag edits made outside business hours for review" },
+  { key: "orphan", label: "Orphan / Unmapped", group: "Governance Controls", tip: "Detect records with no valid parent or mapping" },
+  { key: "bulk_upload", label: "Bulk Uploads", group: "Governance Controls", tip: "Audit bulk-import logs, success/failure counts" },
+  { key: "field_access", label: "Field-Level Access", group: "Governance Controls", tip: "Review per-field edit/view permissions by role" },
+  { key: "quality", label: "Quality Scorecard", group: "Analytics & Quality", tip: "Completeness and accuracy scores per master dimension" },
+  { key: "duplicates", label: "Duplicate Detection", group: "Analytics & Quality", tip: "Potential duplicate pairs ranked by match score" },
+  { key: "reference", label: "Reference Consistency", group: "Analytics & Quality", tip: "Cross-module code/reference-data alignment check" },
+  { key: "ageing", label: "Approval Ageing", group: "Analytics & Quality", tip: "Pending approvals sorted by how long they've been open" },
+  { key: "reconciliation", label: "Reconciliation", group: "Analytics & Quality", tip: "Source-to-target hash comparison for master records" },
+  { key: "alerting", label: "Change Alerting", group: "Analytics & Quality", tip: "Configure threshold-based alerts for sensitive fields" },
+  { key: "scope", label: "Audit Universe", group: "Audit Framework", tip: "Define entities and risk ratings in scope" },
+  { key: "rcm", label: "Risk & Controls", group: "Audit Framework", tip: "Map risks to preventive/detective controls" },
+  { key: "rules", label: "Test Rule Library", group: "Audit Framework", tip: "Reusable CAAT rules and analytics tests" },
+  { key: "data_sources", label: "Data Sources", group: "Audit Framework", tip: "ERP, API and database connector configuration" },
+  { key: "sampling", label: "Sampling", group: "Audit Framework", tip: "Build audit sample populations" },
+  { key: "exceptions", label: "Exceptions", group: "Audit Framework", tip: "Red-flag queue with severity, assignment, status tracking" },
+  { key: "working_papers", label: "Working Papers", group: "Audit Framework", tip: "Evidence, memos and checklists attached to findings" },
+  { key: "findings", label: "Findings", group: "Audit Framework", tip: "Observation and finding log with status workflow" },
+  { key: "remediation", label: "Remediation", group: "Audit Framework", tip: "Action items with owner, status and completion tracking" },
 ];
 const GROUPS = ["Overview", "Change Tracking", "Governance Controls", "Analytics & Quality", "Audit Framework"];
 
@@ -77,13 +74,13 @@ function TableToolbar({ search, setSearch, selected, onDelete, onCsv, csvLabel }
 }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
-      <input className="input" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180, maxWidth: 320 }} />
+      <input className="input" title="Type to filter table rows in real time" placeholder="Search\u2026" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, minWidth: 180, maxWidth: 320 }} />
       {selected.size > 0 && (
-        <button className="btn btn-ghost" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={onDelete}>
+        <button className="btn btn-ghost" title={`Permanently delete ${selected.size} selected row(s)`} style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={onDelete}>
           Delete ({selected.size})
         </button>
       )}
-      <button className="btn btn-ghost" onClick={onCsv}>{csvLabel || "Export CSV"}</button>
+      <button className="btn btn-ghost" title="Download visible rows as a CSV file" onClick={onCsv}>{csvLabel || "Export CSV"}</button>
     </div>
   );
 }
@@ -120,7 +117,7 @@ export default function MasterDataChangeGovernancePage() {
                     borderBottom: "1px solid rgba(255,255,255,0.1)",
                   }}>{open ? "▾" : "▸"} {g}</button>
                   {open && items.map((t) => (
-                    <button key={t.key} onClick={() => setTab(t.key)} style={{
+                    <button key={t.key} onClick={() => setTab(t.key)} title={t.tip} style={{
                       display: "block", width: "100%", textAlign: "left",
                       padding: "8px 14px 8px 22px",
                       background: tab === t.key ? "var(--accent, #e0e7ff)" : "transparent",
@@ -141,9 +138,6 @@ export default function MasterDataChangeGovernancePage() {
         <div style={{ minWidth: 0 }}>
           {tab === "dashboard" && <DashboardSection />}
           {tab === "change_log" && <ChangeLogSection />}
-          {tab === "coa" && <ChangeLogSection endpoint="chart-of-accounts" title="Chart-of-Accounts Changes" />}
-          {tab === "cost_centre" && <ChangeLogSection endpoint="cost-centres" title="Cost-Centre Changes" />}
-          {tab === "bank" && <ChangeLogSection endpoint="bank-masters" title="Bank-Master Changes" />}
           {tab === "maker_checker" && <MakerCheckerSection />}
           {tab === "after_hours" && <AfterHoursSection />}
           {tab === "orphan" && <OrphanSection />}
@@ -218,13 +212,16 @@ function DashboardSection() {
 /* ══════════════════════════════════════════════════════════════
    1-4. CHANGE LOG (critical-field / coa / cost-centre / bank)
    ══════════════════════════════════════════════════════════════ */
-function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Change Log" }: { endpoint?: string; title?: string }) {
+function ChangeLogSection({ endpoint, title }: { endpoint?: string; title?: string } = {}) {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [masterFilter, setMasterFilter] = useState("all");
   const [form, setForm] = useState({ master_type: "chart_of_accounts", record_id: "", record_name: "", field_name: "", old_value: "", new_value: "", change_type: "update", change_user: "", notes: "" });
+
+  const ep = endpoint || (masterFilter === "all" ? "change-logs" : `change-logs/${masterFilter}`);
 
   const filtered = items.filter((it) => {
     if (!search) return true;
@@ -232,8 +229,8 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
     return (it.master_type + it.record_id + it.record_name + it.field_name + it.old_value + it.new_value + it.change_user + it.approval_status).toLowerCase().includes(q);
   });
 
-  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/${endpoint}`)); setLoading(false); setSelected(new Set()); }
-  useEffect(() => { refresh(); }, [endpoint]);
+  async function refresh() { setItems(await get<any[]>(`/api/modules/${SLUG}/${ep}`)); setLoading(false); setSelected(new Set()); }
+  useEffect(() => { refresh(); }, [ep]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -260,7 +257,20 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
-      <h3 style={{ color: "var(--navy)", margin: 0 }}>{title}</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <h3 style={{ color: "var(--navy)", margin: 0 }}>{title || "Critical-Field Change Log"}</h3>
+        {!endpoint && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ fontSize: 13, color: "var(--slate)" }}>Filter by Master Type:</label>
+            <select className="select" value={masterFilter} onChange={(e) => setMasterFilter(e.target.value)} style={{ padding: "5px 10px", fontSize: 13 }}>
+              <option value="all">All Types</option>
+              <option value="chart-of-accounts">Chart of Accounts</option>
+              <option value="cost-centres">Cost Centres</option>
+              <option value="bank-masters">Bank Masters</option>
+            </select>
+          </div>
+        )}
+      </div>
       <SavedBanner show={saved} />
       <form className="card" style={{ padding: 20 }} onSubmit={add}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -280,7 +290,7 @@ function ChangeLogSection({ endpoint = "change-logs", title = "Critical-Field Ch
           <div className="field"><label>Changed By</label><input className="input" value={form.change_user} onChange={(e) => setForm({ ...form, change_user: e.target.value })} /></div>
         </div>
         <div className="field" style={{ marginTop: 8 }}><label>Notes</label><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Log Change</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Save this change to the audit log">Log Change</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No change log entries yet.</p>
@@ -364,7 +374,7 @@ function MakerCheckerSection() {
           <div className="field" style={{ flex: 1, minWidth: 120 }}><label>Required Approvers</label><input className="input" type="number" min={1} max={10} value={form.required_approvers} onChange={(e) => setForm({ ...form, required_approvers: Number(e.target.value) })} /></div>
           <div className="field" style={{ flex: 2, minWidth: 200 }}><label>Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Workflow Rule</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Create a new maker-checker approval rule">Add Workflow Rule</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No workflow rules configured.</p>
@@ -520,7 +530,7 @@ function BulkUploadSection() {
           <div className="field" style={{ flex: 1, minWidth: 80 }}><label>Success</label><input className="input" type="number" value={form.success_count} onChange={(e) => setForm({ ...form, success_count: Number(e.target.value) })} /></div>
           <div className="field" style={{ flex: 1, minWidth: 80 }}><label>Failed</label><input className="input" type="number" value={form.failure_count} onChange={(e) => setForm({ ...form, failure_count: Number(e.target.value) })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Log Upload</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Record this bulk-upload in the audit trail">Log Upload</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No bulk uploads logged.</p>
@@ -762,7 +772,7 @@ function DuplicatesSection() {
           <div className="field" style={{ flex: 1, minWidth: 120 }}><label>Record B Name</label><input className="input" value={form.record_b_name} onChange={(e) => setForm({ ...form, record_b_name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1, minWidth: 80 }}><label>Match %</label><input className="input" type="number" min={0} max={100} value={form.match_score} onChange={(e) => setForm({ ...form, match_score: Number(e.target.value) })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Log Duplicate</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Flag this pair as a potential duplicate">Log Duplicate</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No duplicate pairs detected.</p>
@@ -783,7 +793,7 @@ function DuplicatesSection() {
                     <td><strong>{d.record_b_name || d.record_b_id}</strong></td>
                     <td><span className={`badge ${d.match_score >= 90 ? "badge-danger" : d.match_score >= 70 ? "badge-gold" : "badge-success"}`}>{d.match_score}%</span></td>
                     <td>
-                      <select className="select" value={d.status} onChange={async (e) => { await patch(`/api/modules/${SLUG}/duplicates/${d.id}`, { status: e.target.value }); refresh(); }} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      <select className="select" title="Change the duplicate investigation status" value={d.status} onChange={async (e) => { await patch(`/api/modules/${SLUG}/duplicates/${d.id}`, { status: e.target.value }); refresh(); }} style={{ padding: "4px 8px", fontSize: 12 }}>
                         <option value="open">Open</option>
                         <option value="confirmed">Confirmed</option>
                         <option value="false_positive">False Positive</option>
@@ -841,7 +851,7 @@ function ReferenceSection() {
           <div className="field" style={{ flex: 1, minWidth: 140 }}><label>Module B</label><input className="input" value={form.module_b} onChange={(e) => setForm({ ...form, module_b: e.target.value })} /></div>
           <div className="field"><label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={form.is_consistent} onChange={(e) => setForm({ ...form, is_consistent: e.target.checked })} /> Consistent</label></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Entry</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Record a cross-module reference-data check">Add Entry</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No reference data entries.</p>
@@ -975,7 +985,7 @@ function ReconciliationSection() {
               {["pending", "match", "mismatch"].map((s) => <option key={s}>{s}</option>)}
             </select></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Log Reconciliation</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Log a source-to-target reconciliation comparison">Log Reconciliation</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No reconciliation records.</p>
@@ -1051,7 +1061,7 @@ function AlertingSection() {
           <div className="field" style={{ flex: 2, minWidth: 200 }}><label>Recipients</label><input className="input" value={form.recipients} onChange={(e) => setForm({ ...form, recipients: e.target.value })} placeholder="email1,email2" /></div>
           <div className="field" style={{ flex: 2, minWidth: 200 }}><label>Message</label><input className="input" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Create Alert Rule</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Set up a threshold-based alert for sensitive fields">Create Alert Rule</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No alert rules configured.</p>
@@ -1073,7 +1083,7 @@ function AlertingSection() {
                     <td style={{ fontSize: 12 }}>{a.recipients || "—"}</td>
                     <td><span className={`badge ${a.is_active ? "badge-success" : "badge-slate"}`}>{a.is_active ? "Active" : "Inactive"}</span></td>
                     <td style={{ fontSize: 12 }}>{a.triggered_at ? new Date(a.triggered_at).toLocaleString() : "—"}</td>
-                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} onClick={async () => { await post(`/api/modules/${SLUG}/alerts/${a.id}/trigger`); refresh(); }}>Trigger</button></td>
+                    <td><button className="btn btn-ghost" style={{ padding: "4px 10px" }} title="Manually fire this alert rule now" onClick={async () => { await post(`/api/modules/${SLUG}/alerts/${a.id}/trigger`); refresh(); }}>Trigger</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -1135,7 +1145,7 @@ function ScopeSection() {
             </select></div>
         </div>
         <div className="field" style={{ marginTop: 8 }}><label>Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Entity</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Add an entity to the audit scope universe">Add Entity</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No scope items defined.</p>
@@ -1221,7 +1231,7 @@ function RcmSection() {
               {["Daily", "Weekly", "Monthly", "Quarterly", "Annually"].map((f) => <option key={f}>{f}</option>)}
             </select></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add RCM Entry</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Map a risk to its associated control">Add RCM Entry</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No RCM entries.</p>
@@ -1305,7 +1315,7 @@ function RulesSection() {
           <div className="field"><label>Threshold</label><input className="input" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} /></div>
         </div>
         <div className="field" style={{ marginTop: 8 }}><label>CAAT Script / Description</label><input className="input" value={form.caat_script} onChange={(e) => setForm({ ...form, caat_script: e.target.value })} /></div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Rule</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Register a reusable test or analytics rule">Add Rule</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No rules defined.</p>
@@ -1385,7 +1395,7 @@ function DataSourcesSection() {
           <div className="field" style={{ flex: 2, minWidth: 200 }}><label>Connection Detail</label><input className="input" value={form.connection_detail} onChange={(e) => setForm({ ...form, connection_detail: e.target.value })} /></div>
         </div>
         <div className="field" style={{ marginTop: 8 }}><label>Table Mapping</label><input className="input" value={form.table_mapping} onChange={(e) => setForm({ ...form, table_mapping: e.target.value })} /></div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Data Source</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Configure a new data source connector">Add Data Source</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No data sources configured.</p>
@@ -1465,7 +1475,7 @@ function SamplingSection() {
               {["Random", "Stratified", "Systematic", "Judgemental"].map((m) => <option key={m}>{m}</option>)}
             </select></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Create Sample</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Build a new sample population for testing">Create Sample</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No sampling records.</p>
@@ -1549,7 +1559,7 @@ function ExceptionsSection() {
           <div className="field"><label>Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="field"><label>Assigned To</label><input className="input" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Exception</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Log an exception or red-flag for follow-up">Add Exception</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No exceptions in queue.</p>
@@ -1569,7 +1579,7 @@ function ExceptionsSection() {
                     <td style={{ color: "var(--slate)" }}>{ex.description || "—"}</td>
                     <td><span className={`badge ${badge(ex.severity)}`}>{ex.severity}</span></td>
                     <td>
-                      <select className="select" value={ex.status} onChange={(e) => updateStatus(ex.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      <select className="select" title="Update exception workflow status" value={ex.status} onChange={(e) => updateStatus(ex.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
                         {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
@@ -1633,7 +1643,7 @@ function WorkingPapersSection() {
           <div className="field"><label>Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="field"><label>Reference URL</label><input className="input" value={form.reference_url} onChange={(e) => setForm({ ...form, reference_url: e.target.value })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Paper</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Attach a new working paper or evidence document">Add Paper</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No working papers.</p>
@@ -1716,7 +1726,7 @@ function FindingsSection() {
           <div className="field"><label>Description</label><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div className="field"><label>Assigned To</label><input className="input" value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} /></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Finding</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Record a new audit observation or finding">Add Finding</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No findings logged.</p>
@@ -1735,7 +1745,7 @@ function FindingsSection() {
                     <td><strong>{f.finding_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{f.description}</div></td>
                     <td><span className={`badge ${badge(f.severity)}`}>{f.severity}</span></td>
                     <td>
-                      <select className="select" value={f.status} onChange={(e) => updateStatus(f.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      <select className="select" title="Update finding workflow status" value={f.status} onChange={(e) => updateStatus(f.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
                         {["Open", "In Progress", "Closed"].map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
@@ -1804,7 +1814,7 @@ function RemediationSection() {
               {["Planned", "In Progress", "Completed"].map((s) => <option key={s}>{s}</option>)}
             </select></div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }}>Add Action</button>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} title="Create a remediation task with owner and status">Add Action</button>
       </form>
       {loading ? <p>Loading…</p> : items.length === 0 ? (
         <p style={{ color: "var(--slate)" }}>No remediation items.</p>
@@ -1823,7 +1833,7 @@ function RemediationSection() {
                     <td><strong>{r.action_title}</strong><div style={{ fontSize: 11, color: "var(--slate)" }}>{r.description}</div></td>
                     <td>{r.owner || "—"}</td>
                     <td>
-                      <select className="select" value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
+                      <select className="select" title="Update remediation task status" value={r.status} onChange={(e) => updateStatus(r.id, e.target.value)} style={{ padding: "4px 8px", fontSize: 12 }}>
                         {["Planned", "In Progress", "Completed"].map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
