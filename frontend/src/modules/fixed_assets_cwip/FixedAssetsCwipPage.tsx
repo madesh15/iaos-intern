@@ -72,61 +72,6 @@ export default function FixedAssetsCwipPage() {
                     No records yet.
                   </td>
                 </tr>
-              </thead>
-              <tbody>
-                {arr.map((row, i) => (
-                  <tr key={i}>
-                    {keys.map((k) => (
-                      <td key={k}>
-                        {typeof row[k] === "boolean"
-                          ? row[k] ? "✔" : "✘"
-                          : String(row[k] ?? "—")}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div>
-      {/* Status banner */}
-      {data.status ? (
-        <div className="alert" style={{
-          background: "var(--gold-tint)",
-          color: "var(--gold-strong)",
-          border: "1px solid rgba(184, 134, 43, 0.2)",
-          fontSize: 13,
-        }}>
-          ⚠ {String(data.status)}
-        </div>
-      ) : null}
-
-      {/* Render each key in the response */}
-      {Object.entries(data).map(([key, value]) => {
-        if (key === "module" || key === "status") return null;
-
-        // Object with nested values → render as KPI cards
-        if (value && typeof value === "object" && !Array.isArray(value)) {
-          return (
-            <div key={key} style={{ marginBottom: 20 }}>
-              {renderKPIs(value as Record<string, unknown>, key.replace(/_/g, " ").toUpperCase())}
-            </div>
-          );
-        }
-
-        // Array → render as table
-        if (Array.isArray(value)) {
-          return (
-            <div key={key} style={{ marginBottom: 20 }}>
-              {renderArrayTable(
-                value as Record<string, unknown>[],
-                key.replace(/_/g, " ").toUpperCase()
               )}
             </tbody>
           </table>
