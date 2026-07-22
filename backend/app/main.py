@@ -43,6 +43,18 @@ app.include_router(admin.router)
 app.include_router(modules.router)
 
 
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    detail = str(exc.orig) if exc.orig else "Database constraint violation"
+    if "Duplicate entry" in detail or "duplicate key" in detail:
+        # Extract the conflicting value from the error message
+        msg = detail.split("'")[1] if "'" in detail else "value already exists"
+        return JSONResponse(status_code=409, content={"detail": f"Duplicate entry: {msg} already exists"})
+    if "foreign key constraint" in detail.lower():
+        return JSONResponse(status_code=400, content={"detail": "Referenced record does not exist"})
+    return JSONResponse(status_code=409, content={"detail": "Data constraint violation"})
+
+
 @app.get("/api/health", tags=["system"])
 def health():
     return {"status": "ok", "app": "IAOS", "brand": "Cap Corporate"}

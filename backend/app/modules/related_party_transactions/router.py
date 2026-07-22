@@ -23,6 +23,8 @@ MANIFEST = {
 }
 
 router = APIRouter()
+from .import_router import import_router
+router.include_router(import_router, prefix="/import", tags=["rpt-import"])
 
 
 @router.get("/items", response_model=list[ItemOut])
