@@ -447,5 +447,17 @@ class DashboardStats(BaseModel):
     high_findings: int
     medium_findings: int
     low_findings: int
+    duplicate_items: int = 0
+    missing_hsn: int = 0
+    missing_valuation: int = 0
+    uom_conflicts: int = 0
+    obsolete_items: int = 0
+    dead_stock_items: int = 0
+    capa_pending: int = 0
+    risk_score: float = 0.0
+    compliance_pct: float = 100.0
+    category_distribution: list[dict] = []
+    plant_distribution: list[dict] = []
+    exception_trend: list[dict] = []
     recent_exceptions: list[ExceptionOut]
     recent_findings: list[FindingOut]

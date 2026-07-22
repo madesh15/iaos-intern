@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, DbSession
 
+from . import analytics as anl
 from .schemas import (
     AnalyticsRequest,
     AnalyticsResponse,
@@ -47,9 +48,29 @@ ServiceDep = Annotated[ItemGovernanceService, Depends(get_service)]
 
 # ── Dashboard ───────────────────────────────────────────────────────────────
 
-@api_router.get("/dashboard", response_model=DashboardStats)
+@api_router.get("/dashboard", response_model=dict)
 def get_dashboard(svc: ServiceDep):
-    return svc.get_dashboard_stats()
+    return anl.compute_all_kpis(svc.db, svc.tenant_id)
+
+
+@api_router.get("/kpi", response_model=dict)
+def get_kpi(svc: ServiceDep):
+    return anl.compute_all_kpis(svc.db, svc.tenant_id)
+
+
+@api_router.get("/items/search", response_model=list[ItemOut])
+def search_items(
+    svc: ServiceDep,
+    q: str = "",
+    category: str | None = Query(None),
+    status: str | None = Query(None),
+    plant: str | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+):
+    from . import crud
+    items = crud.search_items(svc.db, svc.tenant_id, q, category, status, plant, skip, limit)
+    return [ItemOut.model_validate(i) for i in items]
 
 
 # ── Items CRUD ──────────────────────────────────────────────────────────────

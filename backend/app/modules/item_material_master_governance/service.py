@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User
 
-from . import repository as repo
+from . import crud as repo
 from . import rules
 from .constants import ExceptionType, Severity
 from .models import (
