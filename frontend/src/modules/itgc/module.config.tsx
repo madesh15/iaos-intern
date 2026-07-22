@@ -3,8 +3,9 @@ import ItgcPage from "./ItgcPage";
 
 const config: ModuleConfig = {
   slug: "itgc",
-  title: "ITGC",
-  description: "ITGC — audit module.",
+  title: "IT General Controls (ITGC)",
+  description:
+    "Tests foundational IT controls: change management, access, operations and backup/recovery.",
   icon: "server",
   group: "Technology & Resilience",
   component: ItgcPage,
