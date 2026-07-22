@@ -3,10 +3,11 @@ import CybersecurityPage from "./CybersecurityPage";
 
 const config: ModuleConfig = {
   slug: "cybersecurity",
-  title: "Cybersecurity",
-  description: "Cybersecurity — audit module.",
-  icon: "server",
-  group: "Technology & Resilience",
+  title: "Cybersecurity & Information Security",
+  description:
+    "Assesses the cyber-control posture: perimeter and endpoint security, vulnerability management, incident response and data-loss prevention.",
+  icon: "shield",
+  group: "Tax, Legal & Compliance",
   component: CybersecurityPage,
 };
 
