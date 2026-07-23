@@ -180,8 +180,22 @@ def compute_dashboard(db: Session, tenant_id: int) -> dict[str, Any]:
         exception_trend_complete[key] = exception_trend.get(key, 0)
 
     # ------------------------------------------------------------------
-    # Assemble response
+    # Assemble response — list-of-objects matching Pydantic schemas
     # ------------------------------------------------------------------
+    risk_trend_list = [{"month": m, "count": c} for m, c in sorted(risk_trend_complete.items())]
+    risk_distribution_list = [
+        {"level": "high", "count": high_risk},
+        {"level": "medium", "count": medium_risk},
+        {"level": "low", "count": low_risk},
+    ]
+    amount_histogram_list = [{"bucket": b, "count": c} for b, c in amount_buckets.items()]
+    monthly_trend_list = [{"month": m, "count": c} for m, c in sorted(monthly_counts_complete.items())]
+    top_users_list = [{"user_name": uid, "count": c} for uid, c in top_users]
+    top_accounts_list = [{"account_code": ac, "account_name": ac, "count": c} for ac, c in top_accounts]
+    posting_heatmap_list = [{"hour": h, "day": str(d), "count": c} for h, d, c in
+                            ((h, d, c) for (h, d), c in sorted(hourly_dow.items()))]
+    exception_trend_list = [{"month": m, "count": c} for m, c in sorted(exception_trend_complete.items())]
+
     return {
         "stats": {
             "total_journals": total_journals,
@@ -193,18 +207,14 @@ def compute_dashboard(db: Session, tenant_id: int) -> dict[str, Any]:
             "open_reconciliation": open_reconciliation,
             "suspense_balance": suspense_balance,
         },
-        "risk_trend": risk_trend_complete,
-        "risk_distribution": {
-            "high": high_risk,
-            "medium": medium_risk,
-            "low": low_risk,
-        },
-        "amount_histogram": amount_buckets,
-        "monthly_trend": monthly_counts_complete,
-        "top_users": [{"user_id": uid, "count": c} for uid, c in top_users],
-        "top_accounts": [{"account_code": ac, "count": c} for ac, c in top_accounts],
-        "posting_heatmap": posting_heatmap,
-        "exception_trend": exception_trend_complete,
+        "risk_trend": risk_trend_list,
+        "risk_distribution": risk_distribution_list,
+        "amount_histogram": amount_histogram_list,
+        "monthly_trend": monthly_trend_list,
+        "top_users": top_users_list,
+        "top_accounts": top_accounts_list,
+        "posting_heatmap": posting_heatmap_list,
+        "exception_trend": exception_trend_list,
     }
 
 
