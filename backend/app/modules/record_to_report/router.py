@@ -60,7 +60,9 @@ def dashboard(current_user: CurrentUser, db: DbSession):
 def seed(current_user: CurrentUser, db: DbSession):
     rules = seed_rules(db, current_user.tenant_id)
     sample = seed_sample_data(db, current_user.tenant_id)
-    return {"rules_created": rules, "sample": sample}
+    from .service import run_risk_scoring
+    risk = run_risk_scoring(db, current_user.tenant_id)
+    return {"rules_created": rules, "seed": sample, "risk_scoring": risk}
 
 
 # =========================================================================
