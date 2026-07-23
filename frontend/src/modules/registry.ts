@@ -34,6 +34,7 @@ export const GROUPS: { name: string; icon: IconName }[] = [
   { name: "Audit Command Center", icon: "file-check" },
   { name: "Controls, Risk & Fraud", icon: "shield" },
   { name: "Finance & Close", icon: "wallet" },
+  { name: "Operations", icon: "truck" },
   { name: "Treasury, Assets & Capital", icon: "building" },
   { name: "Procurement & Spend", icon: "cart" },
   { name: "Revenue & Customers", icon: "trending-up" },
